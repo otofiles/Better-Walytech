@@ -1,9 +1,11 @@
+# Better walytech v2.4
 app.js
 app.css
 *.txt
 stylus-walytech.css
 betterwalytech.js
 walytech-menu.user.js
+context.md
 backup/
 referencia-nova/
 refs/
