@@ -3,7 +3,7 @@
 ## Script
 - **Arquivo ativo (editar sempre este):** `C:\Users\User\Desktop\CSS\WALYTECH 2\walytech-menu-v2.user.js`
 - `walytech-menu.user.js` (v1.0) continua na pasta apenas como referência; não editar salvo pedido explícito.
-- @name: **Better walytech**. @version atual: **2.1**.
+- @name: **Better walytech**. @version atual: **2.2**.
 - @match: `https://walyzappro.walytech.com.br/new/*`
 - Tampermonkey, Edge. Sem @require/@resource. `node --check` passa após cada alteração.
 - Usuário fala pt-BR; responder em português.
