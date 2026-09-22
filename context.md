@@ -2,7 +2,7 @@
 
 ## Script
 - **Arquivo ativo (editar sempre este):** `C:\Users\User\Desktop\CSS\WALYTECH 2\walytech-menu-v2.user.js`
-- `walytech-menu.user.js` (v1.0) continua na pasta apenas como referência; não editar salvo pedido explícito.
+- `walytech-menu.user.js` (v1.0) continua na pasta `versoes\` apenas como referência; não editar salvo pedido explícito.
 - @name: **Better walytech**. @version atual: **2.4**.
 - @match: `https://walyzappro.walytech.com.br/new/*`
 - Tampermonkey, Edge. Sem @require/@resource. `node --check` passa após cada alteração.
@@ -82,7 +82,7 @@ Não existe ainda: precisa verificar se a API/tela do app expõe filas/tickets e
 
 ## Comparação com o site novo (nativos, baixados em 21/09/2026)
 - App agora serve `/new/assets/index-ceuRWBWH.js` + `index-D7iquBW7.css` (novo build).
-- Baixado em `referencia-nova\` (Comparar com `app.js`/`app.css` antigos = hash MD5).
+- Baixado em `referencia-nova\` (Comparar com `refs\app.js`/`refs\app.css` antigos = hash MD5).
 - **CSS: idêntico byte a byte** (`MD5 2B1F84E9D9ECFE668FC57E18A6A12CAD`).
 - **JS: diff de ~18KB**, mas **strings de UI iguais** (nenhuma mudança visível; só 3 diferenças internas relacionadas a emoji-picker/minificação). Todos os seletores que o script usa seguem presentes com as mesmas contagens (`bg-wa-chat-bg`, `bg-wa-bubble`, `bg-sidebar`, `service-report`, menu `role="menu"`, `Toggle theme`, `Finalizar`, header `flex.h-16...`, `aria-haspopup`).
 - **Conclusão: nada a rebasear.** v2.2 continua válida contra o site atual. Se o usuário “ver mudanças”, o ideal é F5 limpo + `__walytDebug()`; se algo quebrar, procurar no bundle novo a classe nova antes de alterar o script.
@@ -97,8 +97,9 @@ Não existe ainda: precisa verificar se a API/tela do app expõe filas/tickets e
 `__walytDebug()`, `__walytTest(nome)`, `__walytDump()`, `__walytNavDebug()`, `__walytRgbDebug()`, `__walytTeclasDebug()`, `__walytNotaDebug()` (v2.4, avaliação média), `__walytUpdateDebug()` (v2.5, autoupdate). Obs.: `__walytBgDebug()` (diagnóstico da imagem de fundo) **não está presente** no arquivo atual — foi perdido numa sobrescrita; recriar se necessário.
 
 ## Arquivos de referência (não editar)
-- `app.js` / `app.css` / `css.txt` / `stylus-walytech.css` / `html.txt` / `div.txt` / `menu.txt`
+- `refs\` = nativos antigos do app: `app.js` / `app.css` / `css.txt` / `stylus-walytech.css` / `html.txt` / `div.txt` / `menu.txt`
 - `referencia-nova\` = nativos atuais baixados (21/09/2026): `index-ceuRWBWH.js`, `index-D7iquBW7.css`, `strings-novas.txt`, `strings-antigas.txt`
+- `versoes\` = versões antigas do script: `walytech-menu.user.js` (v1.0), `betterwalytech.js/.txt` (v1.0) — apenas referência; não editar salvo pedido explícito.
 - `backup\` (versões antigas). Cuidado: `walytech-menu.user.js` já foi sobrescrito pelo usuário mais de uma vez — SEMPRE ler o arquivo antes de editar.
 - Temp grep: `C:\Users\User\AppData\Local\Temp\opencode\grepapp.js` etc.
 
