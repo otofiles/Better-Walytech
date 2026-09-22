@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.2
+// @version      2.3
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
@@ -261,9 +261,12 @@
   var SVG_CHAT = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/60 group-hover:text-sidebar-foreground" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>';
   var SVG_REL = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/60 group-hover:text-sidebar-foreground" aria-hidden="true"><line x1="12" x2="12" y1="20" y2="10"></line><line x1="18" x2="18" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="16"></line></svg>';
 
+  var SVG_DL = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/60 group-hover:text-sidebar-foreground" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>';
+
   var ATALHOS = [
     { rotulo: 'Chat', caminho: '/tickets', svg: SVG_CHAT },
-    { rotulo: 'Relatório de Atendimentos', caminho: '/tickets/service-report', svg: SVG_REL }
+    { rotulo: 'Relatório de Atendimentos', caminho: '/tickets/service-report', svg: SVG_REL },
+    { rotulo: 'Baixar atualizações', acao: 'update', svg: SVG_DL }
   ];
 
   function getBase() {
@@ -325,8 +328,13 @@
 
   function montarLink(item, recolhida) {
     var a = document.createElement('a');
-    a.setAttribute(MARCA, item.caminho);
-    a.setAttribute('href', hrefCompleto(item.caminho));
+    if (item.caminho) {
+      a.setAttribute(MARCA, item.caminho);
+      a.setAttribute('href', hrefCompleto(item.caminho));
+    } else {
+      a.setAttribute('data-walytech-update', '1');
+      a.style.cursor = 'pointer';
+    }
     a.setAttribute('title', item.rotulo);
     a.setAttribute('aria-label', item.rotulo);
     a.style.fontSize = '13px';
@@ -339,14 +347,19 @@
     a.addEventListener('click', function (ev) {
       ev.preventDefault();
       ev.stopPropagation();
+      if (item.acao === 'update') {
+        baixarAtualizacao();
+        return;
+      }
       if (rotaAtiva(item.caminho)) return;
       navegar(a.getAttribute('href'));
     });
     return a;
   }
 
-  function pintarAtivo(a, caminho) {
-    var on = rotaAtiva(caminho);
+  function pintarAtivo(a, item) {
+    if (!item.caminho) return;
+    var on = rotaAtiva(item.caminho);
     a.classList.toggle('bg-sidebar-accent', on);
     a.classList.toggle('text-sidebar-accent-foreground', on);
     a.classList.toggle('text-sidebar-foreground/80', !on);
@@ -381,8 +394,10 @@
         console.log('[walytech] atalhos injetados na barra lateral');
       }
       ATALHOS.forEach(function (item) {
-        var a = wrap.querySelector('[' + MARCA + '="' + item.caminho + '"]');
-        if (a) pintarAtivo(a, item.caminho);
+        var a = item.caminho
+          ? wrap.querySelector('[' + MARCA + '="' + item.caminho + '"]')
+          : wrap.querySelector('[data-walytech-update]');
+        if (a) pintarAtivo(a, item);
       });
     } catch (e) {
       console.log('[walytech] erro:', e.message);
@@ -1318,7 +1333,7 @@
     }
   }
 
-  var SK_VERSION = '2.2';
+  var SK_VERSION = '2.3';
   var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js';
 
   function versaoMaior(a, b) {
@@ -1351,6 +1366,36 @@
         })
         .catch(function () {});
     } catch (e) {}
+  }
+
+  function baixarAtualizacao() {
+    try {
+      console.log('[walytech] procurando atualizacao...');
+      fetch(UPDATE_URL + '?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+        .then(function (txt) {
+          var m = txt.match(/@version\s+([\d.]+)/);
+          if (!m) {
+            mostrarToast('Não foi possível ler a versão mais recente.', true);
+            return;
+          }
+          if (!versaoMaior(m[1], SK_VERSION)) {
+            mostrarToast('Você já está na versão mais recente (' + SK_VERSION + ').');
+            return;
+          }
+          console.log('[walytech] aplicando atualizacao para', m[1]);
+          mostrarToast('Baixando versão ' + m[1] + '...');
+          localStorage.setItem('walytechUpdateCheck', String(Date.now()));
+          setTimeout(function () {
+            window.location.href = UPDATE_URL;
+          }, 800);
+        })
+        .catch(function () {
+          mostrarToast('Falha ao verificar atualizações.', true);
+        });
+    } catch (e) {
+      mostrarToast('Erro ao verificar atualizações.', true);
+    }
   }
 
   function timerMin() {
