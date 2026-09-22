@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.4
+// @version      2.5
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
@@ -263,6 +263,8 @@
 
   var SVG_DL = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/60 group-hover:text-sidebar-foreground" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>';
 
+  var SVG_STA = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/60 group-hover:text-sidebar-foreground" aria-hidden="true"><line x1="18" x2="18" y1="20" y2="10"></line><line x1="12" x2="12" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="14"></line></svg>';
+
   var ATALHOS = [
     { rotulo: 'Chat', caminho: '/tickets', svg: SVG_CHAT },
     { rotulo: 'Relatório de Atendimentos', caminho: '/tickets/service-report', svg: SVG_REL },
@@ -331,7 +333,7 @@
     if (item.caminho) {
       a.setAttribute(MARCA, item.caminho);
       a.setAttribute('href', hrefCompleto(item.caminho));
-    } else {
+    } else if (item.acao === 'update') {
       a.setAttribute('data-walytech-update', '1');
       a.style.cursor = 'pointer';
     }
@@ -377,6 +379,58 @@
     return wrap;
   }
 
+  function principlaRodape(recolhida) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('data-walytech-status', '1');
+    btn.title = 'Verificar status do bot (clique para checar)';
+    btn.setAttribute('aria-label', 'Verificar status');
+    btn.style.cssText = 'display:flex;align-items:center;gap:10px;border-radius:12px;background:rgba(255,255,255,.04);color:inherit;font:inherit;text-align:left;cursor:pointer;margin-top:8px;border:1px solid rgba(128,128,128,.35);' + (recolhida ? 'width:40px;height:40px;justify-content:center;' : 'width:100%;padding:10px 12px;');
+    btn.innerHTML = '<span style="display:inline-flex;flex-shrink:0">' + SVG_STA + '</span>' + (recolhida ? '' : '<span style="min-width:0;flex:1">Status do bot<br><span style="font-size:11px;opacity:.7">clique para verificar</span></span>');
+    btn.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      verificarStatus();
+    });
+    return btn;
+  }
+
+  function loopStatusRodape() {
+    try {
+      var aside = null;
+      var asides = document.querySelectorAll('aside.bg-sidebar');
+      for (var i = 0; i < asides.length; i++) {
+        if (asides[i].querySelector('nav')) { aside = asides[i]; break; }
+      }
+      if (!aside) return;
+      var nav = aside.querySelector('nav');
+      if (!nav) return;
+      var recolhida = estaRecolhida(nav);
+      var card = null;
+      var btns = aside.querySelectorAll('button');
+      for (var k = 0; k < btns.length; k++) {
+        var b = btns[k];
+        var t = (b.getAttribute('aria-label') || '') + ' ' + (b.textContent || '');
+        if (/precisa de ajuda|need help|necesitas ayuda|falar com o suporte|contact support/i.test(t)) { card = b; break; }
+      }
+      if (!card) return;
+      var pai = card.parentNode;
+      if (!pai) return;
+      var btn = pai.querySelector('[data-walytech-status]');
+      if (!btn) {
+        pai.appendChild(principlaRodape(recolhida));
+        console.log('[walytech] botao status no rodape da sidebar');
+      } else if (btn.getAttribute('data-recolhida') !== String(recolhida)) {
+        var novo = principlaRodape(recolhida);
+        novo.setAttribute('data-recolhida', String(recolhida));
+        btn.parentNode.replaceChild(novo, btn);
+        btn = novo;
+      }
+      if (btn && !btn.getAttribute('data-recolhida')) btn.setAttribute('data-recolhida', String(recolhida));
+      if (STATUS_RESULT) pintarStatus(STATUS_RESULT.online);
+    } catch (e) {}
+  }
+
   function loopLink() {
     try {
       var nav = getNav();
@@ -399,6 +453,7 @@
           : wrap.querySelector('[data-walytech-update]');
         if (a) pintarAtivo(a, item);
       });
+      if (STATUS_RESULT) pintarStatus(STATUS_RESULT.online);
     } catch (e) {
       console.log('[walytech] erro:', e.message);
     }
@@ -503,7 +558,7 @@
     '#walytech-timer-panel .waly-timer-agora{width:100%;margin-top:8px;padding:6px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:none;color:#94a3b8;cursor:pointer;font-size:11px}' +
     '#walytech-timer-panel .waly-timer-agora:hover{color:#fff}' +
     '#walytech-timer-panel .waly-timer-last{font-size:11px;opacity:.7;margin-top:6px;text-align:center}' +
-    '#waly-toast{position:fixed;right:16px;bottom:16px;z-index:2147483700;padding:10px 14px;border-radius:10px;background:#1b1b21;color:#4ADE80;border:1px solid rgba(74,222,128,.4);box-shadow:0 12px 32px -8px rgba(0,0,0,.6);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;font-weight:600;opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;pointer-events:none}' +
+    '#waly-toast{position:fixed;right:16px;bottom:16px;z-index:2147483700;padding:10px 14px;border-radius:10px;background:#1b1b21;color:#4ADE80;border:1px solid rgba(74,222,128,.4);box-shadow:0 12px 32px -8px rgba(0,0,0,.6);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;font-weight:600;opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;pointer-events:none;white-space:pre-line}' +
     '#waly-toast.waly-mostrar{opacity:1;transform:translateY(0)}' +
     '#waly-toast.waly-erro{color:#F87171;border-color:rgba(248,113,113,.5)}' +
     '#walytech-brilho-panel{position:fixed;z-index:2147483600;display:none;width:248px;padding:14px;border-radius:14px;background:#1b1b21;color:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px -16px rgba(0,0,0,.65);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px}' +
@@ -1333,7 +1388,7 @@
     }
   }
 
-  var SK_VERSION = '2.4';
+  var SK_VERSION = '2.5';
   var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js';
 
   function versaoMaior(a, b) {
@@ -1396,6 +1451,117 @@
     } catch (e) {
       mostrarToast('Erro ao verificar atualizações.', true);
     }
+  }
+
+  var STATUS_RESULT = null;
+  var STATUS_BUSY = false;
+
+  function tokenPayload() {
+    try {
+      var t = lerNgToken();
+      if (!t) return null;
+      var b = t.split('.')[1];
+      if (!b) return null;
+      var s = b.replace(/-/g, '+').replace(/_/g, '/');
+      while (s.length % 4) s += '=';
+      var raw = decodeURIComponent(escape(atob(s)));
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+
+  function testarApi() {
+    return new Promise(function (resolve) {
+      var tok = lerNgToken();
+      if (!tok) { resolve({ ok: false, ms: 0, info: 'sem token' }); return; }
+      var t0 = Date.now();
+      var h = {
+        'Authorization': 'Bearer ' + tok,
+        'Domain': location.hostname || '',
+        'Accept-Language': localStorage.getItem('lang') || 'pt-BR'
+      };
+      var tid = lerTenantId();
+      if (tid) h['x-tenant-id'] = tid;
+      fetch('/api/usuarios/chat/perfil', { headers: h, credentials: 'include' })
+        .then(function (r) {
+          resolve({ ok: r.ok, ms: Date.now() - t0, info: r.status === 401 || r.status === 403 ? 'sessão inválida (' + r.status + ')' : ('HTTP ' + r.status) });
+        })
+        .catch(function (e) {
+          resolve({ ok: false, ms: Date.now() - t0, info: 'sem resposta' });
+        });
+    });
+  }
+
+  function testarSocket() {
+    return new Promise(function (resolve) {
+      try {
+        var payload = tokenPayload();
+        if (!payload || !payload.usuarioId) {
+          resolve({ ok: false, ms: 0, info: 'token sem usuarioId' });
+          return;
+        }
+        var par = payload.usuarioId % 2 === 0;
+        var ehEspecial = payload.usuarioPerfil === 'GESTOR' || payload.usuarioPerfil === 'SUPERVISOR_CHATBOT';
+        var host = (par || ehEspecial) ? 'notification-n002.mzworkspace.com' : 'notification-n001.mzworkspace.com';
+        var t0 = Date.now();
+        var ws = new WebSocket('wss://' + host + '/socket.io/?EIO=4&transport=websocket');
+        var resolvido = false;
+        var timer = setTimeout(function () {
+          if (!resolvido) {
+            resolvido = true;
+            try { ws.close(); } catch (e) {}
+            resolve({ ok: false, ms: Date.now() - t0, info: 'timeout' });
+          }
+        }, 12000);
+        ws.onopen = function () {
+          if (!resolvido) {
+            resolvido = true;
+            clearTimeout(timer);
+            try { ws.close(); } catch (e) {}
+            resolve({ ok: true, ms: Date.now() - t0, info: 'conectado ao canal de notificações' });
+          }
+        };
+        ws.onerror = function (ev) {
+          if (!resolvido) {
+            resolvido = true;
+            clearTimeout(timer);
+            try { ws.close(); } catch (e) {}
+            resolve({ ok: false, ms: Date.now() - t0, info: 'erro de conexão' });
+          }
+        };
+      } catch (e) {
+        resolve({ ok: false, ms: 0, info: e.message });
+      }
+    });
+  }
+
+  function verificarStatus() {
+    if (STATUS_BUSY) return;
+    STATUS_BUSY = true;
+    mostrarToast('Verificando status...');
+    Promise.all([testarApi(), testarSocket()]).then(function (r) {
+      STATUS_BUSY = false;
+      var api = r[0];
+      var sock = r[1];
+      var online = api.ok && sock.ok;
+      var msgs = [
+        'API: ' + (api.ok ? ('OK (' + api.ms + 'ms)') : ('FALHOU - ' + api.info)),
+        'Socket: ' + (sock.ok ? ('OK (' + sock.ms + 'ms)') : ('FALHOU - ' + sock.info))
+      ];
+      STATUS_RESULT = { online: online, api: api, sock: sock, data: new Date() };
+      console.log('[walytech] status:', online ? 'ONLINE' : 'PROBLEMA', msgs.join(' | '));
+      mostrarToast((online ? 'Bot ONLINE' : 'Bot com problema') + '\n' + msgs.join('\n'), !online);
+      pintarStatus(online);
+    });
+  }
+
+  function pintarStatus(online) {
+    try {
+      var a = document.querySelector('[data-walytech-status]');
+      if (!a) return;
+      a.style.color = online === null ? '' : (online ? '#22c55e' : '#ef4444');
+      var titulo = STATUS_RESULT ? ('API: ' + (STATUS_RESULT.api.ok ? 'OK ' + STATUS_RESULT.api.ms + 'ms' : STATUS_RESULT.api.info) + ' | Socket: ' + (STATUS_RESULT.sock.ok ? 'OK ' + STATUS_RESULT.sock.ms + 'ms' : STATUS_RESULT.sock.info)) : 'Verificar status';
+      a.setAttribute('title', titulo);
+    } catch (e) {}
   }
 
   function timerMin() {
@@ -1803,6 +1969,7 @@
     atualizarHub();
     loopBotoes();
     loopLink();
+    loopStatusRodape();
     loopRgb();
     loopFundo();
     loopTimer();
@@ -1875,6 +2042,12 @@
     console.log('[walytech] updateURL:', UPDATE_URL);
     console.log('[walytech] ultima checagem:', localStorage.getItem('walytechUpdateCheck') ? new Date(parseInt(localStorage.getItem('walytechUpdateCheck'), 10)).toLocaleTimeString('pt-BR') : 'nunca');
     checarAtualizacao(true);
+  };
+
+  window.__walytStatusDebug = function () {
+    console.log('[walytech] ultimo status:', STATUS_RESULT || 'ainda nao verificado');
+    console.log('[walytech] token payload:', tokenPayload() || 'nao decodificado');
+    if (!STATUS_BUSY) verificarStatus();
   };
 
   window.__walytDump = function () {
