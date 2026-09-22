@@ -3,10 +3,11 @@
 ## Script
 - **Arquivo ativo (editar sempre este):** `C:\Users\User\Desktop\CSS\WALYTECH 2\walytech-menu-v2.user.js`
 - `walytech-menu.user.js` (v1.0) continua na pasta apenas como referência; não editar salvo pedido explícito.
-- @name: **Better walytech**. @version atual: **2.4**.
+- @name: **Better walytech**. @version atual: **2.5**.
 - @match: `https://walyzappro.walytech.com.br/new/*`
 - Tampermonkey, Edge. Sem @require/@resource. `node --check` passa após cada alteração.
 - Usuário fala pt-BR; responder em português.
+- **GitHub / autoupdate (v2.5)**: repo público `https://github.com/otofiles/Better-Walytech` (dono `otofiles`). Script tem `@updateURL`/`@downloadURL` apontando para `https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js`. Checker `checarAtualizacao()` no `tick()` faz fetch na raw (cache de 1h em `walytechUpdateCheck`), compara `@version` remoto via `versaoMaior()` com `SK_VERSION` e mostra toast "Nova versão X disponível" quando há update. Helper: `__walytUpdateDebug()` (mostra versão atual, URL, última checagem e força re-busca com `checarAtualizacao(true)`). Para o Tampermonkey conseguir atualizar sozinho, o script deve ser **instalado pela URL do GitHub** (instalar de novo a partir do link), senão a fonte de update não fica registrada. **Regra de trabalho**: a cada alteração de código no script, perguntar ao usuário se quer subir pro GitHub (`git add`/`commit`/`push` na branch `main`), e sempre **bump no `@version`** antes de subir (senão o Tampermonkey ignora o update). Também atualizar `SK_VERSION` para a nova versão no mesmo passo.
 
 ## Autosave no CONTEXT.md (obrigatório)
 - Depois de **toda** alteração feita no código, este CONTEXT.md deve ser atualizado no mesmo passo (regras, funcionalidades, bugs, versão, fixes).
@@ -90,10 +91,10 @@ Não existe ainda: precisa verificar se a API/tela do app expõe filas/tickets e
 - **Imagem de fundo não aparece em OUTRA máquina (Edge, mesmo domínio)**: usuário importou, preview OK, mas fundo não mostra em nenhuma tela. Hipótese: alguma camada opaca do app (classe não coberta pela transparência) cobre o `::before` z-index:-1; ou tema claro diferente. Feito até agora: ampliar transparência para todas as classes `bg-muted`; criado `__walytBgDebug()` que lista possíveis "TELAS OPCACAS" (elementos grandes com background). Ainda pendente: rodar `__walytBgDebug()` na máquina problemática e colar o resultado — só então identificar a classe exata. Usuário também comentou (sem detalhes) que "a imagem tem que ter um formato específico" — estava pendente confirmar qual formato; depois disso o usuário mudou de assunto para os fixes do timer/toast (não retomado).
 
 ## localStorage keys
-`walytechBrandColor`, `walytechBrandBrightness`, `walytechBg`, `walytechBgOn`, `walytechBgBrilho`, `walytechTimerMin`, `walytechTimerOn`, `walytechLuminosidade`, `walytechAtalhos`, `walytechAvancado`.
+`walytechBrandColor`, `walytechBrandBrightness`, `walytechBg`, `walytechBgOn`, `walytechBgBrilho`, `walytechTimerMin`, `walytechTimerOn`, `walytechLuminosidade`, `walytechAtalhos`, `walytechAvancado`, `walytechUpdateCheck`.
 
 ## Helpers de debug no console
-`__walytDebug()`, `__walytTest(nome)`, `__walytDump()`, `__walytNavDebug()`, `__walytRgbDebug()`, `__walytTeclasDebug()`, `__walytNotaDebug()` (v2.4, avaliação média). Obs.: `__walytBgDebug()` (diagnóstico da imagem de fundo) **não está presente** no arquivo atual — foi perdido numa sobrescrita; recriar se necessário.
+`__walytDebug()`, `__walytTest(nome)`, `__walytDump()`, `__walytNavDebug()`, `__walytRgbDebug()`, `__walytTeclasDebug()`, `__walytNotaDebug()` (v2.4, avaliação média), `__walytUpdateDebug()` (v2.5, autoupdate). Obs.: `__walytBgDebug()` (diagnóstico da imagem de fundo) **não está presente** no arquivo atual — foi perdido numa sobrescrita; recriar se necessário.
 
 ## Arquivos de referência (não editar)
 - `app.js` / `app.css` / `css.txt` / `stylus-walytech.css` / `html.txt` / `div.txt` / `menu.txt`
