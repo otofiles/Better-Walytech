@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.3
+// @version      2.4
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
@@ -1333,7 +1333,7 @@
     }
   }
 
-  var SK_VERSION = '2.3';
+  var SK_VERSION = '2.4';
   var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js';
 
   function versaoMaior(a, b) {
