@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.5
+// @version      2.6
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
@@ -431,6 +431,27 @@
     } catch (e) {}
   }
 
+  function temDotNaoLidas(b) {
+    var sps = b.querySelectorAll('span');
+    for (var i = 0; i < sps.length; i++) {
+      var c = sps[i].classList;
+      if (c.contains('bg-emerald-500') && c.contains('rounded-full') && c.contains('h-1.5')) return true;
+    }
+    return false;
+  }
+
+  function loopNaoLidas() {
+    try {
+      var chips = document.querySelectorAll('button.rounded-full');
+      for (var i = 0; i < chips.length; i++) {
+        var b = chips[i];
+        if (!b.parentNode) continue;
+        if (temDotNaoLidas(b)) b.setAttribute('data-walytech-nl', '1');
+        else if (b.hasAttribute('data-walytech-nl')) b.removeAttribute('data-walytech-nl');
+      }
+    } catch (e) {}
+  }
+
   function loopLink() {
     try {
       var nav = getNav();
@@ -498,7 +519,11 @@
     'html.waly-chat [class~="text-primary"],html [id^="msg-"] [class~="text-primary"],html [class*="bg-wa-chat-bg"] [class~="text-primary"],html [class*="bg-wa-bubble"] [class~="text-primary"]{color:#FFFFFF!important;font-weight:700!important}' +
     '.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3 button[aria-label="Finalizar"] svg{stroke:#dc2626!important;color:#dc2626!important}' +
     '.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3 button[aria-label="Finalizar"]:hover svg{stroke:#b91c1c!important;color:#b91c1c!important}' +
-    'button[aria-label="Toggle theme"]{display:none!important}';
+    'button[aria-label="Toggle theme"]{display:none!important}' +
+    'button[data-walytech-nl]{background-color:#10B981!important;border-color:#10B981!important;color:#FFFFFF!important;box-shadow:0 0 0 1px rgba(16,185,129,.35),0 4px 14px -4px rgba(16,185,129,.7)}' +
+    'button[data-walytech-nl]:hover{background-color:#059669!important;border-color:#059669!important;color:#FFFFFF!important}' +
+    'button[data-walytech-nl] svg{stroke:#FFFFFF!important;color:#FFFFFF!important}' +
+    'button[data-walytech-nl] span.bg-emerald-500{background-color:#FFFFFF!important;box-shadow:0 0 0 2px #10B981!important}';
 
   var estiloTema = document.createElement('style');
   estiloTema.id = 'walytech-tema';
@@ -1388,7 +1413,7 @@
     }
   }
 
-  var SK_VERSION = '2.5';
+  var SK_VERSION = '2.6';
   var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js';
 
   function versaoMaior(a, b) {
@@ -1969,6 +1994,7 @@
     atualizarHub();
     loopBotoes();
     loopLink();
+    loopNaoLidas();
     loopStatusRodape();
     loopRgb();
     loopFundo();
@@ -2013,6 +2039,12 @@
         ' soltar=' + (nat.soltar ? 'sim' : 'nao') +
         ' detalhes=' + (nat.detalhes ? 'sim' : 'nao'));
     }
+    var chips = document.querySelectorAll('button.rounded-full');
+    var ver = [];
+    chips.forEach(function (c) {
+      ver.push((c.getAttribute('data-walytech-nl') ? '[VERDE] ' : '') + (c.textContent || '').trim().slice(0, 20));
+    });
+    console.log('[walytech] chips arredondados:', ver.length ? ver.join(' | ') : '(nenhum)');
   };
 
   window.__walytTest = function (nome) {
