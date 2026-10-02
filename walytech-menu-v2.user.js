@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.6
+// @version      2.7
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
@@ -647,7 +647,12 @@
     '#walytech-rgb-panel .waly-av-rot{flex:1;font-size:12px;opacity:.9}' +
     '#walytech-rgb-panel .waly-av-input{width:34px;height:24px;border:0;background:none;cursor:pointer;padding:0}' +
     '#walytech-rgb-panel .waly-av-x{background:none;border:0;color:#94a3b8;cursor:pointer;font-size:13px;padding:0 2px}' +
-    '#walytech-rgb-panel .waly-av-x:hover{color:#EF4444}';
+    '#walytech-rgb-panel .waly-av-x:hover{color:#EF4444}' +
+    '#walytech-rgb-panel .waly-foto-prevw{display:none;margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.16)}' +
+    '#walytech-rgb-panel .waly-foto-prevw img{display:block;width:100%;max-height:150px;object-fit:contain;background:#000}' +
+    '#walytech-rgb-panel .waly-foto-input{width:100%;padding:8px;margin-bottom:10px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;font-size:12px}' +
+    '#walytech-rgb-panel .waly-foto-input::placeholder{color:rgba(255,255,255,.35)}' +
+    'img[data-walytech-foto-inj]{border-radius:inherit}';
   (document.head || document.documentElement).appendChild(estiloPainel);
 
   function hexToHsl(hex) {
@@ -876,6 +881,12 @@
         .then(function (j) {
           var d = j && (j.data || j);
           var v = d ? d.avaliacaoAtendimento : null;
+          if (d && typeof d === 'object') {
+            var nomeApi = d.nome || d.usuarioNome || d.name || (d.usuario && d.usuario.nome);
+            if (nomeApi && !localStorage.getItem(FOTO_NOME_KEY)) {
+              try { localStorage.setItem(FOTO_NOME_KEY, String(nomeApi)); } catch (e) {}
+            }
+          }
           notaCache = (v === null || v === undefined || v === '') ? null : Number(v);
           notaCacheHora = Date.now();
           notaBuscando = false;
@@ -903,9 +914,7 @@
       if (existe && existe.parentNode) existe.parentNode.removeChild(existe);
       return;
     }
-    var alvo = null;
-    var bs = pai.querySelectorAll('button[aria-haspopup="menu"]');
-    if (bs.length) alvo = bs[bs.length - 1];
+    var alvo = btnUsuario();
     if (alvo && alvo.parentNode === pai && existe && existe.previousElementSibling !== alvo) {
       existe.parentNode.removeChild(existe);
       existe = null;
@@ -928,6 +937,514 @@
       var velha = Date.now() - notaCacheHora > 5 * 60 * 1000;
       if ((notaCache === null || velha) && !notaBuscando) buscarNota();
     } catch (e) {}
+  }
+
+  var FOTO_KEY = 'walytechMinhaFoto';
+  var FOTO_ON_KEY = 'walytechMinhaFotoOn';
+  var FOTO_COLEGA_KEY = 'walytechFotoColegas';
+  var FOTO_NOME_KEY = 'walytechMeuNomeFoto';
+  var FOTO_MAP_KEY = 'walytechFotoMap';
+  var FOTO_MAP_HORA_KEY = 'walytechFotoMapHora';
+  var FOTO_TOKEN_KEY = 'walytechGhToken';
+  var FOTO_CACHE_MS = 60 * 60 * 1000;
+  var FOTO_RETRY_MS = 10 * 60 * 1000;
+  var FOTO_CHAT_CACHE_MS = 10 * 60 * 1000;
+  var FOTO_CHAT_CACHE_KEY = 'chat_photo_urls_v1';
+  var FOTO_CHAT_NOSSO_KEY = 'walytechChatFotos';
+  var FOTO_REPO = 'otofiles/Better-Walytech';
+  var FOTO_RAW = 'https://raw.githubusercontent.com/' + FOTO_REPO + '/main/avatares.json';
+  var FOTO_GH_TOKEN = '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';
+  var fotoMap = {};
+  var fotoMapCarregado = false;
+  var fotoLoopUltimo = 0;
+  var chatLista = [];
+  var chatListaHora = 0;
+  var chatBuscando = false;
+  var fotosQuebradas = {};
+
+  function linkValido(u) {
+    return typeof u === 'string' && /^https?:\/\/\S+$/i.test(u.trim());
+  }
+
+  function minhaFoto() {
+    try { return localStorage.getItem(FOTO_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  function fotoLigada() {
+    try { return localStorage.getItem(FOTO_ON_KEY) !== '0'; } catch (e) { return true; }
+  }
+
+  function colegasLigados() {
+    try { return localStorage.getItem(FOTO_COLEGA_KEY) !== '0'; } catch (e) { return true; }
+  }
+
+  function fotoToken() {
+    var emb = String(FOTO_GH_TOKEN || '').trim();
+    if (emb && emb !== 'COLE_AQUI_O_TOKEN_DO_GITHUB') return emb;
+    try { return (localStorage.getItem(FOTO_TOKEN_KEY) || '').trim(); } catch (e) { return ''; }
+  }
+
+  function tokenEmbedido() {
+    var emb = String(FOTO_GH_TOKEN || '').trim();
+    return !!emb && emb !== 'COLE_AQUI_O_TOKEN_DO_GITHUB';
+  }
+
+  function btnUsuario() {
+    var t = getThemeToggle();
+    var pai = t && t.parentNode ? t.parentNode : null;
+    if (pai) {
+var bs = pai.querySelectorAll('button[aria-haspopup]');
+    var ultimo = null;
+    for (var i = 0; i < bs.length; i++) {
+      if (bs[i].hasAttribute('data-walytech') || bs[i].hasAttribute('data-walytech-rgb')) continue;
+      ultimo = bs[i];
+    }
+    if (ultimo) return ultimo;
+    }
+    var salvo = '';
+    try { salvo = localStorage.getItem(FOTO_NOME_KEY) || ''; } catch (e) {}
+    if (salvo) {
+      try {
+        var b2 = document.querySelector('button[aria-label="' + salvo.replace(/"/g, '\\"') + '"]');
+        if (b2) return b2;
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  function meuNome() {
+    var b = btnUsuario();
+    if (b) {
+      var l = (b.getAttribute('aria-label') || '').trim();
+      if (l) {
+        try { localStorage.setItem(FOTO_NOME_KEY, l); } catch (e) {}
+        return l;
+      }
+    }
+    try { return localStorage.getItem(FOTO_NOME_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  function nomeAoLado(w) {
+    var p = w.parentNode;
+    if (!p) return '';
+    var ps = p.querySelectorAll('p');
+    if (!ps.length) return '';
+    return (ps[0].textContent || '').trim();
+  }
+
+  function mapaFotos() {
+    var m = {};
+    if (colegasLigados()) {
+      for (var k in fotoMap) {
+        if (Object.prototype.hasOwnProperty.call(fotoMap, k) && linkValido(fotoMap[k])) m[k] = fotoMap[k];
+      }
+    }
+    var u = minhaFoto();
+    var n = norm(meuNome());
+    if (fotoLigada() && linkValido(u) && n) m[n] = u.trim();
+    return m;
+  }
+
+  function marcarFotoHora(t) {
+    try { localStorage.setItem(FOTO_MAP_HORA_KEY, String(t)); } catch (e) {}
+  }
+
+  function salvarFotoMap(o) {
+    fotoMap = o || {};
+    fotoMapCarregado = true;
+    marcarFotoHora(Date.now());
+    try { localStorage.setItem(FOTO_MAP_KEY, JSON.stringify(fotoMap)); } catch (e) {}
+  }
+
+  function carregarFotoMap(forca) {
+    if (!fotoMapCarregado) {
+      try {
+        var cru = localStorage.getItem(FOTO_MAP_KEY);
+        if (cru) {
+          var j = JSON.parse(cru);
+          if (j && typeof j === 'object') { fotoMap = j; fotoMapCarregado = true; }
+        }
+      } catch (e) {}
+    }
+    var t = 0;
+    try { t = parseInt(localStorage.getItem(FOTO_MAP_HORA_KEY) || '0', 10) || 0; } catch (e) {}
+    var agora = Date.now();
+    if (!forca && agora - t < FOTO_CACHE_MS) return;
+    marcarFotoHora(agora);
+    fetch(FOTO_RAW + '?t=' + agora, { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        var o = {};
+        if (j && typeof j === 'object' && !Array.isArray(j)) {
+          for (var k in j) {
+            if (!Object.prototype.hasOwnProperty.call(j, k)) continue;
+            if (linkValido(j[k])) o[norm(k)] = j[k].trim();
+          }
+        }
+        salvarFotoMap(o);
+        aplicarFotos();
+      })
+      .catch(function () {
+        marcarFotoHora(Date.now() - FOTO_CACHE_MS + FOTO_RETRY_MS);
+      });
+  }
+
+  function iniciaisDe(nome) {
+    var p = String(nome || '').trim().split(/\s+/);
+    var s = '';
+    for (var i = 0; i < p.length && s.length < 2; i++) {
+      if (p[i]) s += p[i].charAt(0);
+    }
+    return s.toUpperCase();
+  }
+
+  function prefixoChat(tab) {
+    return tab === 'CONTACTS' ? 'USER' : String(tab || '').toUpperCase();
+  }
+
+  function lerCacheChat() {
+    try {
+      var c = JSON.parse(localStorage.getItem(FOTO_CHAT_CACHE_KEY) || '{}');
+      return c && typeof c === 'object' && !Array.isArray(c) ? c : {};
+    } catch (e) { return {}; }
+  }
+
+  function carregarChats(forca) {
+    var m = mapaFotos();
+    if (!Object.keys(m).length) return;
+    var agora = Date.now();
+    if (!forca && chatLista.length && agora - chatListaHora < FOTO_CHAT_CACHE_MS) return;
+    if (chatBuscando) return;
+    var tok = lerNgToken();
+    if (!tok) return;
+    chatBuscando = true;
+    var h = {
+      'Authorization': 'Bearer ' + tok,
+      'Domain': location.hostname || '',
+      'Accept-Language': localStorage.getItem('lang') || 'pt-BR'
+    };
+    var tid = lerTenantId();
+    if (tid) h['x-tenant-id'] = tid;
+    try {
+      fetch('/api/chat-interno/all-minimizado', { headers: h, credentials: 'include' })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (j) {
+          var arr = (j && (j.data || j)) || [];
+          if (!Array.isArray(arr)) arr = [];
+          chatLista = arr;
+          chatListaHora = Date.now();
+          chatBuscando = false;
+          sincronizarCacheChat();
+        })
+        .catch(function () { chatBuscando = false; });
+    } catch (e) {
+      chatBuscando = false;
+    }
+  }
+
+  function sincronizarCacheChat() {
+    var m = mapaFotos();
+    var novos = {};
+    if (colegasLigados()) {
+      for (var i = 0; i < chatLista.length; i++) {
+        var it = chatLista[i];
+        if (!it || !it.nome || it.id == null) continue;
+        var url = m[norm(it.nome)];
+        if (!url || fotosQuebradas[url]) continue;
+        novos[prefixoChat(it.tab) + ':' + it.id] = url;
+      }
+    }
+    var nossos = {};
+    try {
+      var cru = JSON.parse(localStorage.getItem(FOTO_CHAT_NOSSO_KEY) || '{}');
+      if (cru && typeof cru === 'object' && !Array.isArray(cru)) nossos = cru;
+    } catch (e) {}
+    var cache = lerCacheChat();
+    var mudou = false;
+    var k;
+    for (k in nossos) {
+      if (Object.prototype.hasOwnProperty.call(nossos, k) && !novos[k] && cache[k]) {
+        delete cache[k];
+        mudou = true;
+      }
+    }
+    for (k in novos) {
+      if (Object.prototype.hasOwnProperty.call(novos, k) && cache[k] !== novos[k]) {
+        cache[k] = novos[k];
+        mudou = true;
+      }
+    }
+    if (!mudou) return;
+    try { localStorage.setItem(FOTO_CHAT_CACHE_KEY, JSON.stringify(cache)); } catch (e) {}
+    try { localStorage.setItem(FOTO_CHAT_NOSSO_KEY, JSON.stringify(novos)); } catch (e) {}
+  }
+
+  function iniciaisNoAvatar(w) {
+    var fb = w.querySelector('span.flex.h-full.w-full');
+    if (!fb) return '';
+    var t = (fb.textContent || '').trim();
+    return t && t.length <= 3 ? t.toUpperCase() : '';
+  }
+
+  function nomePorIniciais(inic) {
+    if (!inic) return '';
+    var m = mapaFotos();
+    var cands = [];
+    var semFoto = [];
+    var noMapa = [];
+    for (var i = 0; i < chatLista.length; i++) {
+      var it = chatLista[i];
+      if (!it || !it.nome || iniciaisDe(it.nome) !== inic) continue;
+      cands.push(it);
+      if (!it.url) semFoto.push(it);
+      if (m[norm(it.nome)]) noMapa.push(it);
+    }
+    if (cands.length === 1) return cands[0].nome;
+    if (semFoto.length === 1) return semFoto[0].nome;
+    if (noMapa.length === 1) return noMapa[0].nome;
+    return '';
+  }
+
+  function nomeDoAvatar(w) {
+    var im = w.querySelector('img[alt]');
+    if (im) {
+      var a = (im.getAttribute('alt') || '').trim();
+      if (a) return a;
+    }
+    var nome = nomeAoLado(w);
+    if (nome) return nome;
+    return nomePorIniciais(iniciaisNoAvatar(w));
+  }
+
+  function ehMeuAvatar(w, meu) {
+    var a = meu || avatarUsuario();
+    if (!a) return false;
+    return w === a || w.contains(a) || a.contains(w);
+  }
+
+  function ehAvatarGrande(el) {
+    var w = el;
+    while (w && w !== document.body && w.nodeType === 1) {
+      var c = w.getAttribute ? w.getAttribute('class') : null;
+      if (typeof c === 'string' && (c.indexOf('h-30') >= 0 || c.indexOf('w-30') >= 0)) return true;
+      w = w.parentNode;
+    }
+    return false;
+  }
+
+  function aplicarFotoImg(im, url) {
+    if (im.getAttribute('data-walytech-foto') === url && im.getAttribute('src') === url) return;
+    if (!im.getAttribute('data-walytech-foto')) im.setAttribute('data-walytech-foto-orig', im.getAttribute('src') || '');
+    im.setAttribute('data-walytech-foto', url);
+    im.setAttribute('src', url);
+  }
+
+  function injetarFoto(w, url, nome) {
+    var injetado = w.querySelector('img[data-walytech-foto-inj]');
+    var nativo = w.querySelector('img:not([data-walytech-foto-inj])');
+    if (nativo) {
+      if (injetado && injetado.parentNode) injetado.parentNode.removeChild(injetado);
+      aplicarFotoImg(nativo, url);
+      return;
+    }
+    if (fotosQuebradas[url]) return;
+    if (injetado) {
+      if (injetado.getAttribute('data-walytech-foto') !== url) {
+        injetado.setAttribute('data-walytech-foto', url);
+        injetado.setAttribute('src', url);
+      }
+      return;
+    }
+    var im = document.createElement('img');
+    im.setAttribute('data-walytech-foto-inj', '1');
+    im.setAttribute('data-walytech-foto', url);
+    im.setAttribute('alt', nome || '');
+    im.setAttribute('decoding', 'async');
+    im.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:1;pointer-events:none';
+    im.onerror = function () {
+      fotosQuebradas[url] = 1;
+      if (im.parentNode) im.parentNode.removeChild(im);
+    };
+    im.src = url;
+    w.appendChild(im);
+  }
+
+  function avatarUsuario() {
+    var b = btnUsuario();
+    if (b) {
+      var im = b.querySelector('img');
+      if (im) return im;
+      var w = b.querySelector('span.rounded-full');
+      if (w) return w;
+    }
+    var t = getThemeToggle();
+    var pai = t && t.parentNode ? t.parentNode : null;
+    if (pai) {
+      var ims = pai.querySelectorAll('img[alt]');
+      if (ims.length) return ims[ims.length - 1];
+    }
+    return null;
+  }
+
+  function aplicarFotoUsuario(url) {
+    var el = avatarUsuario();
+    if (!el) return;
+    if (el.tagName === 'IMG') aplicarFotoImg(el, url);
+    else injetarFoto(el, url, '');
+  }
+
+  function aplicarFotos() {
+    var m = mapaFotos();
+    var u = minhaFoto();
+    if (fotoLigada() && linkValido(u)) aplicarFotoUsuario(u.trim());
+    if (!Object.keys(m).length) return;
+    try {
+      var meu = avatarUsuario();
+      var imgs = document.querySelectorAll('img[alt]');
+      for (var i = 0; i < imgs.length; i++) {
+        var im = imgs[i];
+        var alt = (im.getAttribute('alt') || '').trim();
+        if (!alt || ehAvatarGrande(im)) continue;
+        var alvo = m[norm(alt)];
+        if (alvo) aplicarFotoImg(im, alvo);
+      }
+      var caixas = document.querySelectorAll('span.rounded-full.overflow-hidden');
+      for (var j = 0; j < caixas.length; j++) {
+        var w = caixas[j];
+        if (ehAvatarGrande(w)) continue;
+        if (ehMeuAvatar(w, meu)) continue;
+        var nome = nomeDoAvatar(w);
+        if (!nome) continue;
+        var alvo2 = m[norm(nome)];
+        if (alvo2) injetarFoto(w, alvo2, nome);
+      }
+    } catch (e) {}
+  }
+
+  function restaurarAvatares() {
+    try {
+      var injetados = document.querySelectorAll('img[data-walytech-foto-inj]');
+      for (var i = 0; i < injetados.length; i++) {
+        var im = injetados[i];
+        if (im.parentNode) im.parentNode.removeChild(im);
+      }
+      var marcados = document.querySelectorAll('img[data-walytech-foto]');
+      for (var j = 0; j < marcados.length; j++) {
+        var m = marcados[j];
+        var o = m.getAttribute('data-walytech-foto-orig');
+        if (o !== null) {
+          if (o) m.setAttribute('src', o);
+          else m.removeAttribute('src');
+        }
+        m.removeAttribute('data-walytech-foto');
+        m.removeAttribute('data-walytech-foto-orig');
+      }
+    } catch (e) {}
+    try { sincronizarCacheChat(); } catch (e) {}
+  }
+
+  function loopFoto() {
+    try {
+      carregarFotoMap(false);
+      var agora = Date.now();
+      if (agora - fotoLoopUltimo < 1500) return;
+      fotoLoopUltimo = agora;
+      carregarChats(false);
+      sincronizarCacheChat();
+      aplicarFotos();
+    } catch (e) {}
+  }
+
+  function linhaFoto() {
+    var n = norm(meuNome());
+    var u = minhaFoto();
+    if (!n || !linkValido(u)) return null;
+    return '"' + n + '": "' + u.trim() + '"';
+  }
+
+  function aplicarLinkFoto() {
+    if (!painel) return;
+    var inp = painel.querySelector('#waly-hub-foto-url');
+    var v = ((inp && inp.value) || '').trim();
+    if (!v) {
+      mostrarToast('Cole o link da foto.', true);
+      return;
+    }
+    if (!linkValido(v)) {
+      mostrarToast('Link invalido. Use o link direto da imagem.', true);
+      return;
+    }
+    try {
+      localStorage.setItem(FOTO_KEY, v);
+      localStorage.setItem(FOTO_ON_KEY, '1');
+    } catch (e) {}
+    delete fotosQuebradas[v];
+    var teste = new Image();
+    teste.onerror = function () {
+      mostrarToast('Aviso: essa URL nao carregou como imagem.', true);
+    };
+    teste.src = v;
+    atualizarHub();
+    aplicarFotos();
+    publicarFoto(true);
+  }
+
+  function publicarFoto(auto) {
+    var n = norm(meuNome());
+    var u = minhaFoto();
+    if (!n || !linkValido(u)) {
+      if (!auto) mostrarToast('Defina o link da foto primeiro.', true);
+      return;
+    }
+    var tok = fotoToken();
+    if (!tok) {
+      if (!auto) mostrarToast('Sem token do GitHub para publicar.', true);
+      return;
+    }
+    var h = { 'Authorization': 'Bearer ' + tok, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    var base = 'https://api.github.com/repos/' + FOTO_REPO + '/contents/avatares.json';
+    if (!auto) mostrarToast('Publicando...');
+    fetch(base + '?ref=main', { headers: h })
+      .then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok) throw new Error((j && j.message) || ('HTTP ' + r.status));
+          return j;
+        });
+      })
+      .catch(function () { return null; })
+      .then(function (arq) {
+        var obj = {};
+        if (arq && arq.content) {
+          try {
+            obj = JSON.parse(decodeURIComponent(escape(atob(String(arq.content).replace(/\s/g, ''))))) || {};
+          } catch (e) { obj = {}; }
+        }
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) obj = {};
+        obj[n] = u.trim();
+        var corpo = {
+          message: 'foto de ' + n,
+          content: btoa(unescape(encodeURIComponent(JSON.stringify(obj, null, 2) + '\n'))),
+          branch: 'main'
+        };
+        if (arq && arq.sha) corpo.sha = arq.sha;
+        return fetch(base, { method: 'PUT', headers: h, body: JSON.stringify(corpo) }).then(function (r) {
+          return r.json().then(function (j) {
+            if (!r.ok) throw new Error((j && j.message) || ('HTTP ' + r.status));
+            return j;
+          });
+        });
+      })
+      .then(function () {
+        if (auto) mostrarToast('Foto aplicada e publicada para o time');
+        else mostrarToast('Foto publicada.');
+        carregarFotoMap(true);
+      })
+      .catch(function (e) {
+        var msg = e && e.message ? e.message : 'erro';
+        if (/not accessible|403/i.test(msg)) msg = 'token sem permissao de escrita (Contents: read and write) em ' + FOTO_REPO;
+        if (auto) mostrarToast('Foto aplicada, mas falhou ao publicar: ' + msg, true);
+        else mostrarToast('Falha ao publicar: ' + msg, true);
+      });
   }
 
   var AVANC_KEY = 'walytechAvancado';
@@ -1043,6 +1560,7 @@
       '<button type="button" class="waly-rgb-aba" data-walyaba="modo">Modo</button>' +
       '<button type="button" class="waly-rgb-aba" data-walyaba="luz">Luz</button>' +
       '<button type="button" class="waly-rgb-aba" data-walyaba="fundo">Fundo</button>' +
+      '<button type="button" class="waly-rgb-aba" data-walyaba="foto">Foto</button>' +
       '<button type="button" class="waly-rgb-aba" data-walyaba="ata">Atalhos</button>' +
       '<button type="button" class="waly-rgb-aba" data-walyaba="avanc">Avançado</button>' +
       '</div>' +
@@ -1079,6 +1597,17 @@
       '<button type="button" class="waly-rgb-reset" id="waly-hub-bg-trocar">Importar imagem</button>' +
       '<button type="button" class="waly-rgb-reset waly-bg-remover" id="waly-hub-bg-remover">Remover</button>' +
       '</div>' +
+      '</section>' +
+      '<section class="waly-aba-section" data-walysec="foto">' +
+      '<div class="waly-tema-etq">Minha foto <span class="waly-bval" id="waly-hub-foto-quem"></span></div>' +
+      '<div class="waly-foto-prevw"><img id="waly-hub-foto-prev" alt="Previa"></div>' +
+      '<input type="text" class="waly-foto-input" id="waly-hub-foto-url" placeholder="Cole aqui o link da foto">' +
+      '<div class="waly-bg-acoes">' +
+      '<button type="button" class="waly-rgb-reset" id="waly-hub-foto-usar">Salvar foto</button>' +
+      '<button type="button" class="waly-rgb-reset waly-bg-remover" id="waly-hub-foto-limpar">Remover</button>' +
+      '</div>' +
+      '<label class="waly-bg-ligado"><input type="checkbox" id="waly-hub-foto-on"> Mostrar minha foto no app</label>' +
+      '<label class="waly-bg-ligado"><input type="checkbox" id="waly-hub-foto-colega"> Mostrar fotos dos colegas</label>' +
       '</section>' +
       '<section class="waly-aba-section" data-walysec="ata">' +
       '<div class="waly-tema-etq">Atalhos de teclado</div>' +
@@ -1167,6 +1696,29 @@
       atualizarHub();
     });
 
+    painel.querySelector('#waly-hub-foto-usar').addEventListener('click', aplicarLinkFoto);
+    painel.querySelector('#waly-hub-foto-url').addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        aplicarLinkFoto();
+      }
+    });
+    painel.querySelector('#waly-hub-foto-limpar').addEventListener('click', function () {
+      try { localStorage.removeItem(FOTO_KEY); } catch (e) {}
+      restaurarAvatares();
+      atualizarHub();
+    });
+    painel.querySelector('#waly-hub-foto-on').addEventListener('change', function () {
+      try { localStorage.setItem(FOTO_ON_KEY, this.checked ? '1' : '0'); } catch (e) {}
+      restaurarAvatares();
+      aplicarFotos();
+    });
+    painel.querySelector('#waly-hub-foto-colega').addEventListener('change', function () {
+      try { localStorage.setItem(FOTO_COLEGA_KEY, this.checked ? '1' : '0'); } catch (e) {}
+      restaurarAvatares();
+      aplicarFotos();
+    });
+
     painel.querySelector('#waly-teclas-reset').addEventListener('click', function () {
       try { localStorage.removeItem(TECLAS_KEY); } catch (e) {}
       atualizarPainelTeclas();
@@ -1240,6 +1792,18 @@
     var modo = modoApp();
     var mbs = painel.querySelectorAll('.waly-tema-botao[data-modo]');
     for (var mi2 = 0; mi2 < mbs.length; mi2++) mbs[mi2].classList.toggle('waly-sel', mbs[mi2].getAttribute('data-modo') === modo);
+    var urlFoto = minhaFoto();
+    var pv = painel.querySelector('#waly-hub-foto-prev');
+    if (pv) {
+      pv.parentNode.style.display = urlFoto ? 'block' : 'none';
+      if (urlFoto) pv.src = urlFoto;
+      painel.querySelector('#waly-hub-foto-quem').textContent = meuNome() ? norm(meuNome()) : '(sem usuario)';
+      var inpF = painel.querySelector('#waly-hub-foto-url');
+      if (document.activeElement !== inpF) inpF.value = urlFoto;
+      painel.querySelector('#waly-hub-foto-on').checked = fotoLigada();
+      painel.querySelector('#waly-hub-foto-colega').checked = colegasLigados();
+      painel.querySelector('#waly-hub-foto-limpar').style.display = urlFoto ? '' : 'none';
+    }
     atualizarPainelTeclas();
   }
 
@@ -1413,7 +1977,7 @@
     }
   }
 
-  var SK_VERSION = '2.6';
+  var SK_VERSION = '2.7';
   var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js';
 
   function versaoMaior(a, b) {
@@ -2001,6 +2565,7 @@
     loopTimer();
     loopBrilho();
     loopNota();
+    loopFoto();
     checarAtualizacao();
     fiscalizarToast();
   }
@@ -2019,6 +2584,26 @@
     }
   }).observe(document.body, { childList: true, subtree: true });
   tick();
+
+  window.__walytFotoDebug = function () {
+    console.log('[walytech] meu nome (aria-label do botao de usuario):', meuNome() || '(nao detectado)');
+    console.log('[walytech] minha foto:', minhaFoto() || '(nenhuma)');
+    console.log('[walytech] aplicar minha foto:', fotoLigada());
+    console.log('[walytech] aplicar fotos dos colegas:', colegasLigados());
+    console.log('[walytech] token do GitHub:', tokenEmbedido() ? 'embutido no script' : (fotoToken() ? 'salvo no localStorage' : 'ausente'));
+    console.log('[walytech] registro lido de:', FOTO_RAW);
+    var m = mapaFotos();
+    console.log('[walytech] mapa em uso (' + Object.keys(m).length + '):', JSON.stringify(m).slice(0, 700));
+    console.log('[walytech] chats lidos da API:', chatLista.length, chatLista.slice(0, 30).map(function (c) { return c.nome + (c.url ? ' [foto]' : ' [sem foto]'); }).join(' | '));
+    var nosso = {};
+    try { nosso = JSON.parse(localStorage.getItem(FOTO_CHAT_NOSSO_KEY) || '{}') || {}; } catch (e) {}
+    console.log('[walytech] gravado no cache do app (' + FOTO_CHAT_CACHE_KEY + '):', JSON.stringify(nosso).slice(0, 700));
+    console.log('[walytech] avatares marcados no DOM:', document.querySelectorAll('[data-walytech-foto]').length);
+    console.log('[walytech] fotos injetadas no DOM:', document.querySelectorAll('img[data-walytech-foto-inj]').length);
+    console.log('[walytech] linha para publicar:', linhaFoto() || '(defina o link)');
+    carregarFotoMap(true);
+    carregarChats(true);
+  };
 
   window.__walytDebug = function () {
     var h = getHeader();
