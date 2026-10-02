@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.7
+// @version      2.7.1
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
@@ -951,6 +951,7 @@
   var FOTO_CHAT_CACHE_MS = 10 * 60 * 1000;
   var FOTO_CHAT_CACHE_KEY = 'chat_photo_urls_v1';
   var FOTO_CHAT_NOSSO_KEY = 'walytechChatFotos';
+  var FOTO_BLOQ_KEY = 'walytechFotoBloqueados';
   var FOTO_REPO = 'otofiles/Better-Walytech';
   var FOTO_RAW = 'https://raw.githubusercontent.com/' + FOTO_REPO + '/main/avatares.json';
   var FOTO_GH_TOKEN = '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';
@@ -1032,12 +1033,31 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     return (ps[0].textContent || '').trim();
   }
 
+  function fotoBloqueados() {
+    try {
+      var b = JSON.parse(localStorage.getItem(FOTO_BLOQ_KEY) || '{}');
+      return b && typeof b === 'object' && !Array.isArray(b) ? b : {};
+    } catch (e) { return {}; }
+  }
+
+  function marcarFotoBloqueada(n, on) {
+    if (!n) return;
+    var b = fotoBloqueados();
+    if (on) b[n] = 1;
+    else delete b[n];
+    try { localStorage.setItem(FOTO_BLOQ_KEY, JSON.stringify(b)); } catch (e) {}
+  }
+
   function mapaFotos() {
     var m = {};
+    var bloq = fotoBloqueados();
     if (colegasLigados()) {
       for (var k in fotoMap) {
         if (Object.prototype.hasOwnProperty.call(fotoMap, k) && linkValido(fotoMap[k])) m[k] = fotoMap[k];
       }
+    }
+    for (var b in bloq) {
+      if (Object.prototype.hasOwnProperty.call(bloq, b) && bloq[b]) delete m[b];
     }
     var u = minhaFoto();
     var n = norm(meuNome());
@@ -1378,6 +1398,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       localStorage.setItem(FOTO_KEY, v);
       localStorage.setItem(FOTO_ON_KEY, '1');
     } catch (e) {}
+    marcarFotoBloqueada(norm(meuNome()), false);
     delete fotosQuebradas[v];
     var teste = new Image();
     teste.onerror = function () {
@@ -1389,22 +1410,22 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     publicarFoto(true);
   }
 
-  function publicarFoto(auto) {
-    var n = norm(meuNome());
-    var u = minhaFoto();
-    if (!n || !linkValido(u)) {
-      if (!auto) mostrarToast('Defina o link da foto primeiro.', true);
-      return;
-    }
+  function ghHeaders() {
+    return {
+      'Authorization': 'Bearer ' + fotoToken(),
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28'
+    };
+  }
+
+  function ghUrl() {
+    return 'https://api.github.com/repos/' + FOTO_REPO + '/contents/avatares.json';
+  }
+
+  function lerRegistroFoto() {
     var tok = fotoToken();
-    if (!tok) {
-      if (!auto) mostrarToast('Sem token do GitHub para publicar.', true);
-      return;
-    }
-    var h = { 'Authorization': 'Bearer ' + tok, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
-    var base = 'https://api.github.com/repos/' + FOTO_REPO + '/contents/avatares.json';
-    if (!auto) mostrarToast('Publicando...');
-    fetch(base + '?ref=main', { headers: h })
+    if (!tok) return Promise.reject(new Error('sem token do GitHub'));
+    return fetch(ghUrl() + '?ref=main', { headers: ghHeaders() })
       .then(function (r) {
         return r.json().then(function (j) {
           if (!r.ok) throw new Error((j && j.message) || ('HTTP ' + r.status));
@@ -1420,19 +1441,50 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
           } catch (e) { obj = {}; }
         }
         if (!obj || typeof obj !== 'object' || Array.isArray(obj)) obj = {};
-        obj[n] = u.trim();
-        var corpo = {
-          message: 'foto de ' + n,
-          content: btoa(unescape(encodeURIComponent(JSON.stringify(obj, null, 2) + '\n'))),
-          branch: 'main'
-        };
-        if (arq && arq.sha) corpo.sha = arq.sha;
-        return fetch(base, { method: 'PUT', headers: h, body: JSON.stringify(corpo) }).then(function (r) {
-          return r.json().then(function (j) {
-            if (!r.ok) throw new Error((j && j.message) || ('HTTP ' + r.status));
-            return j;
-          });
+        return { obj: obj, sha: (arq && arq.sha) || null };
+      });
+  }
+
+  function gravarRegistroFoto(st, msg) {
+    var tok = fotoToken();
+    if (!tok) return Promise.reject(new Error('sem token do GitHub'));
+    var corpo = {
+      message: msg,
+      content: btoa(unescape(encodeURIComponent(JSON.stringify(st.obj, null, 2) + '\n'))),
+      branch: 'main'
+    };
+    if (st.sha) corpo.sha = st.sha;
+    return fetch(ghUrl(), { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(corpo) })
+      .then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok) throw new Error((j && j.message) || ('HTTP ' + r.status));
+          return j;
         });
+      });
+  }
+
+  function erroFoto(e) {
+    var msg = e && e.message ? e.message : 'erro';
+    if (/not accessible|403/i.test(msg)) msg = 'token sem permissao de escrita (Contents: read and write) em ' + FOTO_REPO;
+    return msg;
+  }
+
+  function publicarFoto(auto) {
+    var n = norm(meuNome());
+    var u = minhaFoto();
+    if (!n || !linkValido(u)) {
+      if (!auto) mostrarToast('Defina o link da foto primeiro.', true);
+      return;
+    }
+    if (!fotoToken()) {
+      if (!auto) mostrarToast('Sem token do GitHub para publicar.', true);
+      return;
+    }
+    lerRegistroFoto()
+      .then(function (st) {
+        if (st.obj[n] === u.trim()) return null;
+        st.obj[n] = u.trim();
+        return gravarRegistroFoto(st, 'foto de ' + n);
       })
       .then(function () {
         if (auto) mostrarToast('Foto aplicada e publicada para o time');
@@ -1440,10 +1492,37 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
         carregarFotoMap(true);
       })
       .catch(function (e) {
-        var msg = e && e.message ? e.message : 'erro';
-        if (/not accessible|403/i.test(msg)) msg = 'token sem permissao de escrita (Contents: read and write) em ' + FOTO_REPO;
+        var msg = erroFoto(e);
         if (auto) mostrarToast('Foto aplicada, mas falhou ao publicar: ' + msg, true);
         else mostrarToast('Falha ao publicar: ' + msg, true);
+      });
+  }
+
+  function removerFoto() {
+    var n = norm(meuNome());
+    try { localStorage.removeItem(FOTO_KEY); } catch (e) {}
+    marcarFotoBloqueada(n, true);
+    if (fotoMap && n) {
+      try { delete fotoMap[n]; } catch (e) {}
+      try { localStorage.setItem(FOTO_MAP_KEY, JSON.stringify(fotoMap)); } catch (e) {}
+    }
+    restaurarAvatares();
+    atualizarHub();
+    aplicarFotos();
+    mostrarToast('Foto removida');
+    if (!n || !fotoToken()) return;
+    lerRegistroFoto()
+      .then(function (st) {
+        if (!Object.prototype.hasOwnProperty.call(st.obj, n)) return null;
+        delete st.obj[n];
+        return gravarRegistroFoto(st, 'remove foto de ' + n);
+      })
+      .then(function () {
+        carregarFotoMap(true);
+        mostrarToast('Foto removida aqui e no time');
+      })
+      .catch(function (e) {
+        mostrarToast('Removida aqui, mas o time ainda ve: ' + erroFoto(e), true);
       });
   }
 
@@ -1703,11 +1782,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
         aplicarLinkFoto();
       }
     });
-    painel.querySelector('#waly-hub-foto-limpar').addEventListener('click', function () {
-      try { localStorage.removeItem(FOTO_KEY); } catch (e) {}
-      restaurarAvatares();
-      atualizarHub();
-    });
+    painel.querySelector('#waly-hub-foto-limpar').addEventListener('click', removerFoto);
     painel.querySelector('#waly-hub-foto-on').addEventListener('change', function () {
       try { localStorage.setItem(FOTO_ON_KEY, this.checked ? '1' : '0'); } catch (e) {}
       restaurarAvatares();
@@ -1802,7 +1877,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       if (document.activeElement !== inpF) inpF.value = urlFoto;
       painel.querySelector('#waly-hub-foto-on').checked = fotoLigada();
       painel.querySelector('#waly-hub-foto-colega').checked = colegasLigados();
-      painel.querySelector('#waly-hub-foto-limpar').style.display = urlFoto ? '' : 'none';
+      var temMinha = !!urlFoto || !!mapaFotos()[norm(meuNome())];
+      painel.querySelector('#waly-hub-foto-limpar').style.display = temMinha ? '' : 'none';
     }
     atualizarPainelTeclas();
   }
@@ -1977,7 +2053,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.7';
+  var SK_VERSION = '2.7.1';
   var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js';
 
   function versaoMaior(a, b) {
@@ -2591,6 +2667,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     console.log('[walytech] aplicar minha foto:', fotoLigada());
     console.log('[walytech] aplicar fotos dos colegas:', colegasLigados());
     console.log('[walytech] token do GitHub:', tokenEmbedido() ? 'embutido no script' : (fotoToken() ? 'salvo no localStorage' : 'ausente'));
+    console.log('[walytech] fotos removidas (bloqueadas):', JSON.stringify(fotoBloqueados()));
     console.log('[walytech] registro lido de:', FOTO_RAW);
     var m = mapaFotos();
     console.log('[walytech] mapa em uso (' + Object.keys(m).length + '):', JSON.stringify(m).slice(0, 700));
