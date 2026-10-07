@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "better-walytech-fotos",
+  "main": "walytech-foto-worker.js",
+  "compatibility_date": "2026-10-07",
+  "workers_dev": true,
+  "observability": {
+    "enabled": false
+  },
+  "kv_namespaces": [
+    {
+      "binding": "FOTOS",
+      "id": "60b7c43a68854455967d934e318f2498"
+    }
+  ],
+  "vars": {
+    "ORIGENS": "https://walyzappro.walytech.com.br"
+  }
+}

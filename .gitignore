@@ -11,3 +11,7 @@ bkp/
 referencia-nova/
 refs/
 versoes/
+
+# Cloudflare Workers (2.7.3)
+.wrangler/
+node_modules/

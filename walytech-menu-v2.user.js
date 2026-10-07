@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.7.1
+// @version      2.7.3
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
@@ -946,6 +946,9 @@
   var FOTO_MAP_KEY = 'walytechFotoMap';
   var FOTO_MAP_HORA_KEY = 'walytechFotoMapHora';
   var FOTO_TOKEN_KEY = 'walytechGhToken';
+  var FOTO_SRV_KEY = 'walytechFotoServidor';
+  var FOTO_SRV_CHAVE_KEY = 'walytechFotoChave';
+  var FOTO_SRV_OFF_KEY = 'walytechFotoServidorOff';
   var FOTO_CACHE_MS = 60 * 60 * 1000;
   var FOTO_RETRY_MS = 10 * 60 * 1000;
   var FOTO_CHAT_CACHE_MS = 10 * 60 * 1000;
@@ -954,7 +957,9 @@
   var FOTO_BLOQ_KEY = 'walytechFotoBloqueados';
   var FOTO_REPO = 'otofiles/Better-Walytech';
   var FOTO_RAW = 'https://raw.githubusercontent.com/' + FOTO_REPO + '/main/avatares.json';
-  var FOTO_GH_TOKEN = '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';
+  var FOTO_GH_TOKEN = '';
+  var FOTO_SRV_URL = 'https://better-walytech-fotos.otoni-luizg.workers.dev';
+  var FOTO_SRV_CHAVE = 'b613632f4ac04a40adea6ce24ef7caab';
   var fotoMap = {};
   var fotoMapCarregado = false;
   var fotoLoopUltimo = 0;
@@ -988,6 +993,108 @@
   function tokenEmbedido() {
     var emb = String(FOTO_GH_TOKEN || '').trim();
     return !!emb && emb !== 'COLE_AQUI_O_TOKEN_DO_GITHUB';
+  }
+
+  function fotoServidor() {
+    if (fotoServidorDesligado()) return '';
+    var v = '';
+    try { v = (localStorage.getItem(FOTO_SRV_KEY) || '').trim(); } catch (e) { v = ''; }
+    if (!v) v = valorPadrao(FOTO_SRV_URL);
+    return v.replace(/\/+$/, '');
+  }
+
+  function fotoServidorDesligado() {
+    try { return localStorage.getItem(FOTO_SRV_OFF_KEY) === '1'; } catch (e) { return false; }
+  }
+
+  function valorPadrao(v) {
+    var s = String(v || '').trim();
+    if (!s || s.indexOf('COLE_AQUI') === 0) return '';
+    return s;
+  }
+
+  function fotoChave() {
+    var v = '';
+    try { v = (localStorage.getItem(FOTO_SRV_CHAVE_KEY) || '').trim(); } catch (e) { v = ''; }
+    if (!v) v = valorPadrao(FOTO_SRV_CHAVE);
+    return v;
+  }
+
+  function fotoSync() {
+    if (fotoServidor()) return 'servidor';
+    if (fotoToken()) return 'github';
+    return 'local';
+  }
+
+  function fotoSyncTexto() {
+    var f = fotoSync();
+    if (f === 'servidor') return 'servidor proprio' + (fotoServidorPadrao() ? ' (predefinido)' : '');
+    if (f === 'github') return 'GitHub (token local)';
+    return fotoServidorDesligado() ? 'desligada nesta maquina' : 'somente neste navegador';
+  }
+
+  function fotoServidorPadrao() {
+    if (fotoServidorDesligado()) return false;
+    var v = '';
+    try { v = (localStorage.getItem(FOTO_SRV_KEY) || '').trim(); } catch (e) { v = ''; }
+    return !v && !!valorPadrao(FOTO_SRV_URL);
+  }
+
+  function srvUrl() {
+    return fotoServidor() + '/avatares.json';
+  }
+
+  function srvHeaders() {
+    var h = { 'Content-Type': 'application/json' };
+    var k = fotoChave();
+    if (k) h['X-Waly-Key'] = k;
+    return h;
+  }
+
+  function erroServidorTexto(status, txt) {
+    var m = '';
+    try {
+      var j = JSON.parse(txt || '');
+      m = (j && (j.message || j.error || j.erro)) || '';
+    } catch (e) { m = ''; }
+    var s = String(status);
+    if (s === '401') return 'chave de escrita invalida ou negada pelo servidor';
+    if (s === '403') return m ? m : 'servidor recusou a origem ou a chave';
+    if (s === '404') return 'registro ainda nao existe no servidor';
+    if (s === '429') return 'servidor limitando requisicoes, tente de novo';
+    if (!s || s === '0') return 'servidor nao respondeu';
+    return (m ? m : 'erro do servidor') + ' (HTTP ' + s + ')';
+  }
+
+  function testarServidorFoto() {
+    if (!painel) return;
+    var st = painel.querySelector('#waly-hub-foto-srv-st');
+    if (!fotoServidor()) {
+      if (st) st.textContent = 'Nenhum servidor configurado.';
+      return;
+    }
+    if (st) st.textContent = 'Testando...';
+    fetch(srvUrl() + '?t=' + Date.now(), { headers: srvHeaders(), cache: 'no-store' })
+      .then(function (r) {
+        return r.text().then(function (t) { return { ok: r.ok, status: r.status, txt: t }; });
+      })
+      .then(function (r) {
+        if (!r.ok) {
+          if (st) st.textContent = 'Erro: ' + erroServidorTexto(r.status, r.txt);
+          return;
+        }
+        var n = 0;
+        try {
+          var j = JSON.parse(r.txt || '{}');
+          n = Object.keys(j || {}).length;
+        } catch (e) { n = 0; }
+        if (st) st.textContent = 'Servidor ok. ' + n + ' registro(s) no time.';
+        mostrarToast('Servidor de sincronizacao ok');
+        carregarFotoMap(true);
+      })
+      .catch(function (e) {
+        if (st) st.textContent = 'Falha: ' + (e && e.message ? e.message : 'nao deu para falar com o servidor');
+      });
   }
 
   function btnUsuario() {
@@ -1091,7 +1198,10 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     var agora = Date.now();
     if (!forca && agora - t < FOTO_CACHE_MS) return;
     marcarFotoHora(agora);
-    fetch(FOTO_RAW + '?t=' + agora, { cache: 'no-store' })
+    var url = fotoServidor() ? (srvUrl() + '?t=' + agora) : (FOTO_RAW + '?t=' + agora);
+    var opts = { cache: 'no-store' };
+    if (fotoServidor()) opts.headers = srvHeaders();
+    fetch(url, opts)
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
         var o = {};
@@ -1423,8 +1533,21 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   }
 
   function lerRegistroFoto() {
+    if (fotoServidor()) {
+      return fetch(srvUrl() + '?t=' + Date.now(), { headers: srvHeaders(), cache: 'no-store' })
+        .then(function (r) {
+          return r.text().then(function (t) {
+            if (r.status === 404) return {};
+            if (!r.ok) throw new Error(erroServidorTexto(r.status, t));
+            if (!t) return {};
+            var j = JSON.parse(t);
+            return (j && typeof j === 'object' && !Array.isArray(j)) ? j : {};
+          });
+        })
+        .then(function (obj) { return { obj: obj, sha: null }; });
+    }
     var tok = fotoToken();
-    if (!tok) return Promise.reject(new Error('sem token do GitHub'));
+    if (!tok) return Promise.reject(new Error('sem servidor configurado e sem token do GitHub'));
     return fetch(ghUrl() + '?ref=main', { headers: ghHeaders() })
       .then(function (r) {
         return r.json().then(function (j) {
@@ -1432,7 +1555,6 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
           return j;
         });
       })
-      .catch(function () { return null; })
       .then(function (arq) {
         var obj = {};
         if (arq && arq.content) {
@@ -1445,9 +1567,19 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       });
   }
 
-  function gravarRegistroFoto(st, msg) {
+  function gravarRegistroFoto(st, msg, substituir) {
+    if (fotoServidor()) {
+      var url = srvUrl() + (substituir ? '?substituir=1' : '');
+      return fetch(url, { method: 'PUT', headers: srvHeaders(), body: JSON.stringify(st.obj) })
+        .then(function (r) {
+          return r.text().then(function (t) {
+            if (!r.ok) throw new Error(erroServidorTexto(r.status, t));
+            return t;
+          });
+        });
+    }
     var tok = fotoToken();
-    if (!tok) return Promise.reject(new Error('sem token do GitHub'));
+    if (!tok) return Promise.reject(new Error('sem servidor configurado e sem token do GitHub'));
     var corpo = {
       message: msg,
       content: btoa(unescape(encodeURIComponent(JSON.stringify(st.obj, null, 2) + '\n'))),
@@ -1465,6 +1597,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
 
   function erroFoto(e) {
     var msg = e && e.message ? e.message : 'erro';
+    if (/bad credentials/i.test(msg)) msg = 'token do GitHub invalido (revogado) ou servidor recusou a chave';
     if (/not accessible|403/i.test(msg)) msg = 'token sem permissao de escrita (Contents: read and write) em ' + FOTO_REPO;
     return msg;
   }
@@ -1476,8 +1609,9 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       if (!auto) mostrarToast('Defina o link da foto primeiro.', true);
       return;
     }
-    if (!fotoToken()) {
-      if (!auto) mostrarToast('Sem token do GitHub para publicar.', true);
+    if (!fotoServidor() && !fotoToken()) {
+      if (auto) mostrarToast('Foto aplicada so neste navegador (sem sincronizacao).', true);
+      else mostrarToast('Sem servidor de sincronizacao e sem token do GitHub.', true);
       return;
     }
     lerRegistroFoto()
@@ -1510,12 +1644,12 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     atualizarHub();
     aplicarFotos();
     mostrarToast('Foto removida');
-    if (!n || !fotoToken()) return;
+    if (!n || (!fotoServidor() && !fotoToken())) return;
     lerRegistroFoto()
       .then(function (st) {
         if (!Object.prototype.hasOwnProperty.call(st.obj, n)) return null;
         delete st.obj[n];
-        return gravarRegistroFoto(st, 'remove foto de ' + n);
+        return gravarRegistroFoto(st, 'remove foto de ' + n, true);
       })
       .then(function () {
         carregarFotoMap(true);
@@ -1687,6 +1821,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       '</div>' +
       '<label class="waly-bg-ligado"><input type="checkbox" id="waly-hub-foto-on"> Mostrar minha foto no app</label>' +
       '<label class="waly-bg-ligado"><input type="checkbox" id="waly-hub-foto-colega"> Mostrar fotos dos colegas</label>' +
+      '<div class="waly-av-anota" id="waly-hub-foto-sync"></div>' +
       '</section>' +
       '<section class="waly-aba-section" data-walysec="ata">' +
       '<div class="waly-tema-etq">Atalhos de teclado</div>' +
@@ -1699,6 +1834,15 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       '<div class="waly-av-anota">Ajuste cada parte do tema separadamente (balões de mensagem, destaques, fundos).</div>' +
       '<div class="waly-av-lista">' + avancRows + '</div>' +
       '<button type="button" class="waly-rgb-reset" id="waly-av-reset">Restaurar padrão (todas)</button>' +
+      '<div class="waly-tema-etq">Sincronização das fotos</div>' +
+      '<div class="waly-av-anota">Opcional: se o script já vier com um servidor, é só usar. Para trocar (ou desligar nesta máquina), use os campos abaixo.</div>' +
+      '<input type="text" class="waly-foto-input" id="waly-hub-foto-srv" placeholder="URL do servidor (https://...)">' +
+      '<input type="password" class="waly-foto-input" id="waly-hub-foto-chave" placeholder="Chave de escrita (se o servidor pedir)">' +
+      '<div class="waly-bg-acoes">' +
+      '<button type="button" class="waly-rgb-reset" id="waly-hub-foto-srv-ok">Salvar e testar</button>' +
+      '<button type="button" class="waly-rgb-reset waly-bg-remover" id="waly-hub-foto-srv-off">Desligar</button>' +
+      '</div>' +
+      '<div class="waly-av-anota" id="waly-hub-foto-srv-st"></div>' +
       '</section>';
     document.body.appendChild(painel);
 
@@ -1793,6 +1937,40 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       restaurarAvatares();
       aplicarFotos();
     });
+    painel.querySelector('#waly-hub-foto-srv-ok').addEventListener('click', function () {
+      var i1 = painel.querySelector('#waly-hub-foto-srv');
+      var i2 = painel.querySelector('#waly-hub-foto-chave');
+      var v = ((i1 && i1.value) || '').trim().replace(/\/+$/, '');
+      var c = ((i2 && i2.value) || '').trim();
+      if (v && !/^https:\/\/[^\s]+$/i.test(v)) {
+        mostrarToast('URL invalida. Comece com https://', true);
+        return;
+      }
+      try {
+        if (v) localStorage.setItem(FOTO_SRV_KEY, v); else localStorage.removeItem(FOTO_SRV_KEY);
+        if (c) localStorage.setItem(FOTO_SRV_CHAVE_KEY, c); else localStorage.removeItem(FOTO_SRV_CHAVE_KEY);
+        localStorage.removeItem(FOTO_SRV_OFF_KEY);
+      } catch (e) {}
+      var st = painel.querySelector('#waly-hub-foto-srv-st');
+      if (st) st.textContent = '';
+      if (!fotoServidor()) {
+        mostrarToast(fotoServidorDesligado() ? 'Sincronizacao desligada' : 'Nenhum servidor configurado');
+        atualizarHub();
+        return;
+      }
+      testarServidorFoto();
+    });
+    painel.querySelector('#waly-hub-foto-srv-off').addEventListener('click', function () {
+      try {
+        localStorage.removeItem(FOTO_SRV_KEY);
+        localStorage.removeItem(FOTO_SRV_CHAVE_KEY);
+        localStorage.setItem(FOTO_SRV_OFF_KEY, '1');
+      } catch (e) {}
+      var st = painel.querySelector('#waly-hub-foto-srv-st');
+      if (st) st.textContent = '';
+      mostrarToast('Sincronizacao desligada nesta maquina');
+      atualizarHub();
+    });
 
     painel.querySelector('#waly-teclas-reset').addEventListener('click', function () {
       try { localStorage.removeItem(TECLAS_KEY); } catch (e) {}
@@ -1879,6 +2057,16 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       painel.querySelector('#waly-hub-foto-colega').checked = colegasLigados();
       var temMinha = !!urlFoto || !!mapaFotos()[norm(meuNome())];
       painel.querySelector('#waly-hub-foto-limpar').style.display = temMinha ? '' : 'none';
+      var sy = painel.querySelector('#waly-hub-foto-sync');
+      if (sy) sy.textContent = 'Publica para o time: ' + fotoSyncTexto();
+    }
+    var srvI = painel.querySelector('#waly-hub-foto-srv');
+    if (srvI) {
+      if (document.activeElement !== srvI) srvI.value = fotoServidor();
+      var chI = painel.querySelector('#waly-hub-foto-chave');
+      if (chI && document.activeElement !== chI) chI.value = fotoChave();
+      var stI = painel.querySelector('#waly-hub-foto-srv-st');
+      if (stI && !stI.textContent) stI.textContent = 'Estado: ' + fotoSyncTexto() + '.';
     }
     atualizarPainelTeclas();
   }
@@ -2053,7 +2241,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.7.1';
+  var SK_VERSION = '2.7.3';
   var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js';
 
   function versaoMaior(a, b) {
@@ -2667,8 +2855,12 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     console.log('[walytech] aplicar minha foto:', fotoLigada());
     console.log('[walytech] aplicar fotos dos colegas:', colegasLigados());
     console.log('[walytech] token do GitHub:', tokenEmbedido() ? 'embutido no script' : (fotoToken() ? 'salvo no localStorage' : 'ausente'));
+    console.log('[walytech] sincronizacao:', fotoSync(), '-', fotoSyncTexto());
+    console.log('[walytech] servidor:', fotoServidor() || '(nenhum)', fotoServidorPadrao() ? '(predefinido no script)' : (fotoServidorDesligado() ? '(desligado nesta maquina)' : '(so nesta maquina)'));
+    console.log('[walytech] chave de escrita:', fotoChave() ? 'definida' : 'vazia (so leitura)');
+    console.log('[walytech] sincronizacao desligada nesta maquina:', fotoServidorDesligado());
     console.log('[walytech] fotos removidas (bloqueadas):', JSON.stringify(fotoBloqueados()));
-    console.log('[walytech] registro lido de:', FOTO_RAW);
+    console.log('[walytech] registro lido de:', fotoServidor() ? srvUrl() : FOTO_RAW);
     var m = mapaFotos();
     console.log('[walytech] mapa em uso (' + Object.keys(m).length + '):', JSON.stringify(m).slice(0, 700));
     console.log('[walytech] chats lidos da API:', chatLista.length, chatLista.slice(0, 30).map(function (c) { return c.nome + (c.url ? ' [foto]' : ' [sem foto]'); }).join(' | '));
