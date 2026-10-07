@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.7.3
+// @version      2.7.4
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.7.4
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.7.4
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -949,7 +949,8 @@
   var FOTO_SRV_KEY = 'walytechFotoServidor';
   var FOTO_SRV_CHAVE_KEY = 'walytechFotoChave';
   var FOTO_SRV_OFF_KEY = 'walytechFotoServidorOff';
-  var FOTO_CACHE_MS = 60 * 60 * 1000;
+  var FOTO_CACHE_MS = 10 * 60 * 1000;
+  var FOTO_MAP_FORCE_MS = 60 * 1000;
   var FOTO_RETRY_MS = 10 * 60 * 1000;
   var FOTO_CHAT_CACHE_MS = 10 * 60 * 1000;
   var FOTO_CHAT_CACHE_KEY = 'chat_photo_urls_v1';
@@ -967,6 +968,7 @@
   var chatListaHora = 0;
   var chatBuscando = false;
   var fotosQuebradas = {};
+  var fotoMapForceUltimo = 0;
 
   function linkValido(u) {
     return typeof u === 'string' && /^https?:\/\/\S+$/i.test(u.trim());
@@ -1183,6 +1185,23 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     try { localStorage.setItem(FOTO_MAP_KEY, JSON.stringify(fotoMap)); } catch (e) {}
   }
 
+  function mapaigual(a, b) {
+    var ka = Object.keys(a || {});
+    var kb = Object.keys(b || {});
+    if (ka.length !== kb.length) return false;
+    for (var i = 0; i < ka.length; i++) {
+      if (a[ka[i]] !== b[ka[i]]) return false;
+    }
+    return true;
+  }
+
+  function atualizarMapaTime(manual) {
+    var agora = Date.now();
+    if (!manual && agora - fotoMapForceUltimo < FOTO_MAP_FORCE_MS) return;
+    fotoMapForceUltimo = agora;
+    carregarFotoMap(true);
+  }
+
   function carregarFotoMap(forca) {
     if (!fotoMapCarregado) {
       try {
@@ -1202,17 +1221,24 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     var opts = { cache: 'no-store' };
     if (fotoServidor()) opts.headers = srvHeaders();
     fetch(url, opts)
-      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (r) {
+        return r.text().then(function (txt) {
+          if (!r.ok) throw new Error('http ' + r.status);
+          var j = JSON.parse(txt);
+          if (!j || typeof j !== 'object' || Array.isArray(j)) throw new Error('formato invalido');
+          return j;
+        });
+      })
       .then(function (j) {
         var o = {};
-        if (j && typeof j === 'object' && !Array.isArray(j)) {
-          for (var k in j) {
-            if (!Object.prototype.hasOwnProperty.call(j, k)) continue;
-            if (linkValido(j[k])) o[norm(k)] = j[k].trim();
-          }
+        for (var k in j) {
+          if (!Object.prototype.hasOwnProperty.call(j, k)) continue;
+          if (linkValido(j[k])) o[norm(k)] = j[k].trim();
         }
+        var mudou = !mapaigual(fotoMap, o);
         salvarFotoMap(o);
         aplicarFotos();
+        if (mudou && forca) mostrarToast('Fotos do time atualizadas. Da um F5 para ver.');
       })
       .catch(function () {
         marcarFotoHora(Date.now() - FOTO_CACHE_MS + FOTO_RETRY_MS);
@@ -1573,6 +1599,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       return fetch(url, { method: 'PUT', headers: srvHeaders(), body: JSON.stringify(st.obj) })
         .then(function (r) {
           return r.text().then(function (t) {
+            if (r.status === 404) throw new Error('endereco do servidor invalido (confira a URL)');
             if (!r.ok) throw new Error(erroServidorTexto(r.status, t));
             return t;
           });
@@ -1822,6 +1849,9 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       '<label class="waly-bg-ligado"><input type="checkbox" id="waly-hub-foto-on"> Mostrar minha foto no app</label>' +
       '<label class="waly-bg-ligado"><input type="checkbox" id="waly-hub-foto-colega"> Mostrar fotos dos colegas</label>' +
       '<div class="waly-av-anota" id="waly-hub-foto-sync"></div>' +
+      '<div class="waly-bg-acoes">' +
+      '<button type="button" class="waly-rgb-reset" id="waly-hub-foto-atualizar">Atualizar fotos do time</button>' +
+      '</div>' +
       '</section>' +
       '<section class="waly-aba-section" data-walysec="ata">' +
       '<div class="waly-tema-etq">Atalhos de teclado</div>' +
@@ -1919,6 +1949,10 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       atualizarHub();
     });
 
+    painel.querySelector('#waly-hub-foto-atualizar').addEventListener('click', function () {
+      atualizarMapaTime(true);
+      mostrarToast('Buscando fotos do time...');
+    });
     painel.querySelector('#waly-hub-foto-usar').addEventListener('click', aplicarLinkFoto);
     painel.querySelector('#waly-hub-foto-url').addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter') {
@@ -2018,6 +2052,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     for (var ai2 = 0; ai2 < abas.length; ai2++) abas[ai2].classList.toggle('waly-aba-ativa', abas[ai2].getAttribute('data-walyaba') === nome);
     var secs = painel.querySelectorAll('.waly-aba-section');
     for (var si = 0; si < secs.length; si++) secs[si].classList.toggle('waly-vis', secs[si].getAttribute('data-walysec') === nome);
+    if (nome === 'foto') atualizarMapaTime(false);
     atualizarHub();
   }
 
@@ -2096,7 +2131,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       if (painelTimer) fecharPainelTimer();
       posicionarPainel(btn);
       painel.classList.add('waly-aberto');
-      atualizarSelecao();
+      mostrarAba(abaAtiva);
     }
   }
 
@@ -2241,8 +2276,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.7.3';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js';
+  var SK_VERSION = '2.7.4';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.7.4';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
@@ -2295,7 +2330,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
           mostrarToast('Baixando versão ' + m[1] + '...');
           localStorage.setItem('walytechUpdateCheck', String(Date.now()));
           setTimeout(function () {
-            window.location.href = UPDATE_URL;
+            window.location.href = UPDATE_URL + '&t=' + Date.now();
           }, 800);
         })
         .catch(function () {
@@ -2838,12 +2873,21 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   brilhoAplicar();
 
   setInterval(tick, 1000);
+  var tickAgendado = false;
+  function agendarTick() {
+    if (tickAgendado) return;
+    tickAgendado = true;
+    setTimeout(function () {
+      tickAgendado = false;
+      tick();
+    }, 250);
+  }
   new MutationObserver(function (muts) {
     for (var m = 0; m < muts.length; m++) {
       var alvo = muts[m].target;
       if (alvo && alvo.nodeType === 1 && ehNossoDOM(alvo)) continue;
       if (!alvo && muts[m].addedNodes.length && muts[m].addedNodes[0].nodeType === 1 && ehNossoDOM(muts[m].addedNodes[0])) continue;
-      tick();
+      agendarTick();
       return;
     }
   }).observe(document.body, { childList: true, subtree: true });
