@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.7.4
+// @version      2.8
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.7.4
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.7.4
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -142,20 +142,31 @@
     var menus = [];
     g.querySelectorAll('button').forEach(function (b) {
       var ehNosso = b.hasAttribute('data-walytech') || b.hasAttribute('data-walytech-rgb') || b.hasAttribute('data-walytech-timer');
-      if (ehNosso) { b.style.display = ''; return; }
+      if (ehNosso) { b.style.display = ''; b.removeAttribute('data-waly-btn'); return; }
       var la = norm(b.getAttribute('aria-label') || '');
-      var manter = /finali[sz]|finish|terminar|terminar atendimento/.test(la) ||
-        /transfer/.test(la) ||
-        /fechar conversa|close \w*(conversation|chat)|encerrar|cerrar/.test(la);
       var ehMenu = b.getAttribute('aria-haspopup') === 'menu';
       if (ehMenu) {
         menus.push(b);
         b.style.display = 'none';
+        b.removeAttribute('data-waly-btn');
         return;
       }
+      var manter = /finali[sz]|finish|terminar|terminar atendimento/.test(la) ||
+        /transfer/.test(la) ||
+        /fechar conversa|close \w*(conversation|chat)|encerrar|cerrar/.test(la);
+      if (/finali[sz]|finish|terminar|terminar atendimento/.test(la)) b.setAttribute('data-waly-btn', 'fin');
+      else if (/transfer/.test(la)) b.setAttribute('data-waly-btn', 'trans');
+      else if (/fechar conversa|close \w*(conversation|chat)|encerrar|cerrar/.test(la)) b.setAttribute('data-waly-btn', 'fech');
+      else b.removeAttribute('data-waly-btn');
       b.style.display = manter ? '' : 'none';
     });
-    if (menus.length) menus[menus.length - 1].style.display = '';
+    if (menus.length) {
+      var ultimoMenu = menus[menus.length - 1];
+      ultimoMenu.style.display = '';
+      ultimoMenu.setAttribute('data-waly-btn', 'dots');
+    }
+    var num = h.querySelector('span.max-w-xs.shrink-0.truncate');
+    if (num) num.setAttribute('data-waly-num', '');
   }
 
   function acharBotoesNativos() {
@@ -517,8 +528,9 @@
     'html.waly-bg,html.waly-bg body{background-color:transparent!important}' +
     'html.waly-bg [class*="bg-background"],html.waly-bg [class*="bg-muted/"]{background-color:transparent!important}' +
     'html.waly-chat [class~="text-primary"],html [id^="msg-"] [class~="text-primary"],html [class*="bg-wa-chat-bg"] [class~="text-primary"],html [class*="bg-wa-bubble"] [class~="text-primary"]{color:#FFFFFF!important;font-weight:700!important}' +
-    '.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3 button[aria-label="Finalizar"] svg{stroke:#dc2626!important;color:#dc2626!important}' +
-    '.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3 button[aria-label="Finalizar"]:hover svg{stroke:#b91c1c!important;color:#b91c1c!important}' +
+    ':where(.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3 button[aria-label="Finalizar"]) svg{stroke:#dc2626!important;color:#dc2626!important}' +
+    ':where(.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3 button[aria-label="Finalizar"]:hover) svg{stroke:#b91c1c!important;color:#b91c1c!important}' +
+    ':where(.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3 button[aria-label="Finalizar"]:hover){background-color:color-mix(in srgb,#b91c1c 26%,transparent)!important}' +
     'button[aria-label="Toggle theme"]{display:none!important}' +
     'button[data-walytech-nl]{background-color:#10B981!important;border-color:#10B981!important;color:#FFFFFF!important;box-shadow:0 0 0 1px rgba(16,185,129,.35),0 4px 14px -4px rgba(16,185,129,.7)}' +
     'button[data-walytech-nl]:hover{background-color:#059669!important;border-color:#059669!important;color:#FFFFFF!important}' +
@@ -642,9 +654,12 @@
     '#walytech-rgb-panel .waly-teclas-tecla:hover{background:rgba(255,255,255,.16)}' +
     '#walytech-rgb-panel .waly-teclas-gravando{border-color:#4ADE80;color:#4ADE80}' +
     '#walytech-rgb-panel .waly-av-anota{opacity:.75;margin-bottom:10px;line-height:1.4}' +
-    '#walytech-rgb-panel .waly-av-grupo{margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;opacity:.5}' +
+    '#walytech-rgb-panel .waly-av-grupo{margin-top:12px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;opacity:.5}' +
+    '#walytech-rgb-panel .waly-av-desc{opacity:.55;font-size:11px;line-height:1.45;margin:3px 0 7px}' +
+    '#walytech-rgb-panel .waly-av-lista{max-height:calc(100vh - 260px);overflow-y:auto;padding-right:3px}' +
     '#walytech-rgb-panel .waly-av-linha{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid rgba(255,255,255,.07)}' +
-    '#walytech-rgb-panel .waly-av-rot{flex:1;font-size:12px;opacity:.9}' +
+    '#walytech-rgb-panel .waly-av-rot{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;opacity:.9}' +
+    '#walytech-rgb-panel .waly-av-hex{font-style:normal;font-size:10px;opacity:.5;letter-spacing:.3px;font-family:ui-monospace,SFMono-Regular,monospace}' +
     '#walytech-rgb-panel .waly-av-input{width:34px;height:24px;border:0;background:none;cursor:pointer;padding:0}' +
     '#walytech-rgb-panel .waly-av-x{background:none;border:0;color:#94a3b8;cursor:pointer;font-size:13px;padding:0 2px}' +
     '#walytech-rgb-panel .waly-av-x:hover{color:#EF4444}' +
@@ -731,7 +746,7 @@
   function aplicarCor(hex, salvar) {
     var hsl = hexToHsl(hex);
     var l0 = clamp100(hsl.l + brilhoSalvo());
-    estiloTema.textContent = CSS_BASE + buildCss(hsl.h, hsl.s, l0) + avancCss();
+    estiloTema.textContent = CSS_BASE + buildCss(hsl.h, hsl.s, l0) + avancCss() + avancExtraCss();
     avancAplicar();
     if (salvar !== false) {
       try { localStorage.setItem(COR_KEY, hex); } catch (e) {}
@@ -1690,7 +1705,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   var AVANC_KEY = 'walytechAvancado';
   var SEL_AVANC = ':root:root, .light.light, .dark.dark, [data-theme="light"][data-theme="light"], [data-theme="dark"][data-theme="dark"]';
   var AVANC_PARTS = [
-    { nome: 'Cor principal', var: '--primary' },
+    { grupo: 'Tema geral', desc: 'Cores base usadas por todo o app: botões, cards e textos.', nome: 'Cor principal', var: '--primary' },
     { nome: 'Texto da cor principal', var: '--primary-foreground' },
     { nome: 'Cor secundária', var: '--secondary' },
     { nome: 'Fundo suave', var: '--muted' },
@@ -1701,7 +1716,17 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     { nome: 'Texto da página', var: '--foreground' },
     { nome: 'Fundo dos cards', var: '--card' },
     { nome: 'Cor de borda', var: '--border' },
-    { nome: 'Erro / destrutivo', var: '--destructive' }
+    { nome: 'Erro / destrutivo', var: '--destructive' },
+    { grupo: 'Botões do header', desc: 'Ícone e fundo quando o mouse passa por cima. Sem alteração, o app mantém a cor nativa.', nome: 'Finalizar — ícone', var: '--waly-fin', pad: '#dc2626' },
+    { nome: 'Finalizar — hover', var: '--waly-fin-h', pad: '#b91c1c' },
+    { nome: 'Transferir — ícone', var: '--waly-trans', pad: '#94a3b8' },
+    { nome: 'Transferir — hover', var: '--waly-trans-h', pad: '#94a3b8' },
+    { nome: 'Fechar conversa — ícone', var: '--waly-fech', pad: '#94a3b8' },
+    { nome: 'Fechar conversa — hover', var: '--waly-fech-h', pad: '#94a3b8' },
+    { nome: '3 pontinhos — ícone', var: '--waly-dots', pad: '#94a3b8' },
+    { nome: '3 pontinhos — hover', var: '--waly-dots-h', pad: '#94a3b8' },
+    { grupo: 'Atendimento', desc: 'Número do contato que aparece no topo da conversa.', nome: 'Número do contato', var: '--waly-num', pad: '#94a3b8' },
+    { grupo: 'Presença', desc: 'Dot de status ao lado da sua foto no topo. Vermelho quando offline.', nome: 'Dot de offline', var: '--waly-off', pad: '#B22123' }
   ];
   var abaAtiva = 'cor';
 
@@ -1736,6 +1761,29 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     for (var k in o) if (o[k]) r.push(k + ':' + o[k] + '!important');
     if (!r.length) return '';
     return SEL_AVANC + '{' + r.join(';') + ';}';
+  }
+
+  function avancExtraCss() {
+    var o = avancSalvo();
+    var r = [];
+    var bt = [
+      { k: 'fin', sel: '[data-waly-btn="fin"]', padI: '#dc2626', padH: '#b91c1c' },
+      { k: 'trans', sel: '[data-waly-btn="trans"]' },
+      { k: 'fech', sel: '[data-waly-btn="fech"]' },
+      { k: 'dots', sel: '[data-waly-btn="dots"]' }
+    ];
+    for (var i = 0; i < bt.length; i++) {
+      var ic = o['--waly-' + bt[i].k] || bt[i].padI;
+      var hv = o['--waly-' + bt[i].k + '-h'] || bt[i].padH || ic;
+      if (ic) r.push(bt[i].sel + ' svg{stroke:' + ic + '!important;color:' + ic + '!important}');
+      if (hv) {
+        r.push(bt[i].sel + ':hover svg{stroke:' + hv + '!important;color:' + hv + '!important}');
+        r.push(bt[i].sel + ':hover{background-color:color-mix(in srgb,' + hv + ' 26%,transparent)!important}');
+      }
+    }
+    if (o['--waly-num']) r.push('html [data-waly-num]{color:' + o['--waly-num'] + '!important}');
+    r.push('[class~="bg-zinc-400"]{background-color:' + (o['--waly-off'] || '#B22123') + '!important}');
+    return r.join('');
   }
 
   function avancReassert() {
@@ -1782,15 +1830,18 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }).join('');
     var avancRows = '';
     var avGroup = null;
+    var avSaved = avancSalvo();
     for (var avi = 0; avi < AVANC_PARTS.length; avi++) {
       var ap = AVANC_PARTS[avi];
       if (ap.grupo && ap.grupo !== avGroup) {
         avGroup = ap.grupo;
         avancRows += '<div class="waly-av-grupo">' + ap.grupo + '</div>';
+        if (ap.desc) avancRows += '<div class="waly-av-desc">' + ap.desc + '</div>';
       }
+      var avVal = avSaved[ap.var] || ap.pad || '#8b8b8b';
       avancRows += '<div class="waly-av-linha" data-var="' + ap.var + '">' +
-        '<span class="waly-av-rot">' + ap.nome + '</span>' +
-        '<input type="color" class="waly-av-input" data-avcor="' + ap.var + '" value="' + (avancSalvo()[ap.var] || '#8b8b8b') + '">' +
+        '<span class="waly-av-rot">' + ap.nome + '<i class="waly-av-hex">' + avVal.toUpperCase() + '</i></span>' +
+        '<input type="color" class="waly-av-input" data-avcor="' + ap.var + '" value="' + avVal + '">' +
         '<button type="button" class="waly-av-x" data-avx="' + ap.var + '" title="Restaurar padrão">&#10005;</button></div>';
     }
     painel.innerHTML =
@@ -2012,6 +2063,19 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       mostrarToast('Atalhos restaurados');
     });
 
+    function avPadDe(vn) {
+      for (var i2 = 0; i2 < AVANC_PARTS.length; i2++) {
+        if (AVANC_PARTS[i2].var === vn) return AVANC_PARTS[i2].pad || '#8b8b8b';
+      }
+      return '#8b8b8b';
+    }
+    function avPintarHex(vn, val) {
+      var lin = painel.querySelector('.waly-av-linha[data-var="' + vn + '"]');
+      if (!lin) return;
+      var hx = lin.querySelector('.waly-av-hex');
+      if (hx) hx.textContent = String(val || '').toUpperCase();
+    }
+
     var avInps = painel.querySelectorAll('.waly-av-input');
     for (var vi = 0; vi < avInps.length; vi++) {
       avInps[vi].addEventListener('input', function () {
@@ -2019,6 +2083,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
         var o = avancSalvo();
         o[vn] = this.value;
         try { localStorage.setItem(AVANC_KEY, JSON.stringify(o)); } catch (e) {}
+        avPintarHex(vn, this.value);
         aplicarCor(corSalva(), false);
       });
     }
@@ -2029,15 +2094,21 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
         var o = avancSalvo();
         delete o[vn];
         try { localStorage.setItem(AVANC_KEY, JSON.stringify(o)); } catch (e) {}
+        var pad = avPadDe(vn);
         var inp2 = painel.querySelector('.waly-av-input[data-avcor="' + vn + '"]');
-        if (inp2) inp2.value = '#8b8b8b';
+        if (inp2) inp2.value = pad;
+        avPintarHex(vn, pad);
         aplicarCor(corSalva(), false);
       });
     }
     painel.querySelector('#waly-av-reset').addEventListener('click', function () {
       try { localStorage.removeItem(AVANC_KEY); } catch (e) {}
       var aii = painel.querySelectorAll('.waly-av-input');
-      for (var r2 = 0; r2 < aii.length; r2++) aii[r2].value = '#8b8b8b';
+      for (var r2 = 0; r2 < aii.length; r2++) {
+        var pad2 = avPadDe(aii[r2].getAttribute('data-avcor'));
+        aii[r2].value = pad2;
+        avPintarHex(aii[r2].getAttribute('data-avcor'), pad2);
+      }
       aplicarCor(corSalva(), false);
       mostrarToast('Tema avançado restaurado');
     });
@@ -2276,8 +2347,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.7.4';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.7.4';
+  var SK_VERSION = '2.8';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
