@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8
+// @version      2.8.1
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.1
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.1
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -501,6 +501,9 @@
   var BGBRILHO_KEY = 'walytechBgBrilho';
   var BGBRILHO_MIN = -60;
   var BGBRILHO_MAX = 60;
+  var BGOP_KEY = 'walytechBgOpacidade';
+  var BGOP_MIN = 0;
+  var BGOP_MAX = 100;
   var TIMER_KEY = 'walytechTimerMin';
   var TIMER_ON_KEY = 'walytechTimerOn';
   var TIMER_OPCOES = [1, 2, 3, 5, 10, 15, 20, 30];
@@ -523,7 +526,7 @@
     'header button svg,header a svg,header [role="menuitem"] svg{stroke:#FFFFFF!important;color:#FFFFFF!important}' +
     'header button:hover,header a:hover,header [role="menuitem"]:hover{background-color:rgba(255,255,255,.14)!important;color:#FFFFFF!important}' +
     '[data-walytech] svg{pointer-events:none}' +
-    'html.waly-bg::before{content:"";position:fixed;inset:0;z-index:-1;background-image:var(--waly-bg-img);background-position:center;background-size:cover;background-repeat:no-repeat;background-attachment:fixed}' +
+    'html.waly-bg::before{content:"";position:fixed;inset:0;z-index:-1;background-image:var(--waly-bg-img);background-position:center;background-size:cover;background-repeat:no-repeat;background-attachment:fixed;opacity:var(--waly-bg-opacidade,1)}' +
     'html.waly-bg::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--waly-bg-shade)}' +
     'html.waly-bg,html.waly-bg body{background-color:transparent!important}' +
     'html.waly-bg [class*="bg-background"],html.waly-bg [class*="bg-muted/"]{background-color:transparent!important}' +
@@ -559,23 +562,6 @@
     '#walytech-rgb-panel .waly-rgb-reset:hover{background:rgba(255,255,255,.16)}' +
     '#walytech-rgb-panel .waly-rgb-bval{opacity:.75;font-variant-numeric:tabular-nums}' +
     '#walytech-rgb-panel .waly-rgb-range{width:100%;margin:0 0 12px;cursor:pointer;accent-color:#fff}' +
-    '#walytech-bg-panel{position:fixed;z-index:2147483600;display:none;width:260px;padding:14px;border-radius:14px;background:#1b1b21;color:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px -16px rgba(0,0,0,.65);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px}' +
-    '#walytech-bg-panel.waly-aberto{display:block}' +
-    '#walytech-bg-panel .waly-rgb-topo{display:flex;align-items:center;justify-content:space-between;font-weight:600;margin-bottom:10px}' +
-    '#walytech-bg-panel .waly-rgb-x{background:none;border:0;color:#fff;cursor:pointer;font-size:13px;opacity:.7;padding:2px 4px}' +
-    '#walytech-bg-panel .waly-rgb-x:hover{opacity:1}' +
-    '#walytech-bg-panel .waly-rgb-linha{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}' +
-    '#walytech-bg-panel .waly-rgb-range{width:100%;margin:0 0 12px;cursor:pointer;accent-color:#fff}' +
-    '#walytech-bg-panel .waly-rgb-bval{opacity:.75;font-variant-numeric:tabular-nums}' +
-    '#walytech-bg-panel .waly-bg-prevw{display:none;margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.16)}' +
-    '#walytech-bg-panel #waly-bg-preview{display:block;width:100%;max-height:110px;object-fit:cover;background:#000}' +
-    '#walytech-bg-panel .waly-bg-ligado{display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer}' +
-    '#walytech-bg-panel .waly-bg-acoes{display:flex;gap:8px;margin-top:12px}' +
-    '#walytech-bg-panel .waly-rgb-reset{padding:8px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:12px}' +
-    '#walytech-bg-panel .waly-rgb-reset:hover{background:rgba(255,255,255,.16)}' +
-    '#walytech-bg-panel .waly-bg-acoes .waly-rgb-reset{flex:1}' +
-    '#walytech-bg-panel .waly-bg-remover{border-color:rgba(239,68,68,.5)!important;color:#EF4444!important}' +
-    '#walytech-bg-panel .waly-bg-remover:hover{background:rgba(239,68,68,.16)!important}' +
     '#waly-bg-file{display:none}' +
     '#walytech-timer-panel{position:fixed;z-index:2147483600;display:none;width:232px;padding:14px;border-radius:14px;background:#1b1b21;color:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px -16px rgba(0,0,0,.65);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px}' +
     '#walytech-timer-panel.waly-aberto{display:block}' +
@@ -598,34 +584,9 @@
     '#waly-toast{position:fixed;right:16px;bottom:16px;z-index:2147483700;padding:10px 14px;border-radius:10px;background:#1b1b21;color:#4ADE80;border:1px solid rgba(74,222,128,.4);box-shadow:0 12px 32px -8px rgba(0,0,0,.6);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;font-weight:600;opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;pointer-events:none;white-space:pre-line}' +
     '#waly-toast.waly-mostrar{opacity:1;transform:translateY(0)}' +
     '#waly-toast.waly-erro{color:#F87171;border-color:rgba(248,113,113,.5)}' +
-    '#walytech-brilho-panel{position:fixed;z-index:2147483600;display:none;width:248px;padding:14px;border-radius:14px;background:#1b1b21;color:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px -16px rgba(0,0,0,.65);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px}' +
-    '#walytech-brilho-panel.waly-aberto{display:block}' +
-    '#walytech-brilho-panel .waly-rgb-topo{display:flex;align-items:center;justify-content:space-between;font-weight:600;margin-bottom:10px}' +
-    '#walytech-brilho-panel .waly-rgb-x{background:none;border:0;color:#fff;cursor:pointer;font-size:13px;opacity:.7;padding:2px 4px}' +
-    '#walytech-brilho-panel .waly-rgb-x:hover{opacity:1}' +
-    '#walytech-brilho-panel .waly-rgb-linha{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}' +
-    '#walytech-brilho-panel .waly-rgb-range{width:100%;margin:0 0 12px;cursor:pointer;accent-color:#fff}' +
-    '#walytech-brilho-panel .waly-rgb-bval{opacity:.75;font-variant-numeric:tabular-nums}' +
-    '#walytech-brilho-panel .waly-rgb-reset{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:12px}' +
-    '#walytech-brilho-panel .waly-rgb-reset:hover{background:rgba(255,255,255,.16)}' +
-    '#walytech-brilho-panel .waly-brilho-desc{opacity:.75;margin-bottom:10px;line-height:1.4}' +
     '#walytech-brilho-overlay{position:fixed;inset:0;z-index:2147483500;pointer-events:none;display:none}' +
     '[data-walytech-timer].waly-ativo svg{stroke:#4ADE80!important;color:#4ADE80!important}' +
-    '#walytech-teclas-panel{position:fixed;z-index:2147483600;display:none;width:258px;padding:14px;border-radius:14px;background:#1b1b21;color:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px -16px rgba(0,0,0,.65);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px}' +
-    '#walytech-teclas-panel.waly-aberto{display:block}' +
-    '#walytech-teclas-panel .waly-rgb-topo{display:flex;align-items:center;justify-content:space-between;font-weight:600;margin-bottom:10px}' +
-    '#walytech-teclas-panel .waly-rgb-x{background:none;border:0;color:#fff;cursor:pointer;font-size:13px;opacity:.7;padding:2px 4px}' +
-    '#walytech-teclas-panel .waly-rgb-x:hover{opacity:1}' +
-    '#walytech-teclas-panel .waly-teclas-desc{opacity:.75;margin-bottom:10px;line-height:1.5}' +
-    '#walytech-teclas-panel .waly-teclas-linha{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid rgba(255,255,255,.07)}' +
-    '#walytech-teclas-panel .waly-teclas-linha:first-of-type{border-top:0}' +
-    '#walytech-teclas-panel .waly-teclas-rot{opacity:.9}' +
-    '#walytech-teclas-panel .waly-teclas-tecla{padding:3px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:12px;text-align:center;white-space:nowrap}' +
-    '#walytech-teclas-panel .waly-teclas-tecla:hover{background:rgba(255,255,255,.16)}' +
-    '#walytech-teclas-panel .waly-teclas-gravando{border-color:#4ADE80;color:#4ADE80;animation:waly-teclas-pisca .9s infinite alternate}' +
     '@keyframes waly-teclas-pisca{from{opacity:.55}to{opacity:1}}' +
-    '#walytech-teclas-panel .waly-rgb-reset{width:100%;padding:8px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:12px;margin-top:6px}' +
-    '#walytech-teclas-panel .waly-rgb-reset:hover{background:rgba(255,255,255,.16)}' +
     '#walytech-rgb-panel{width:300px;max-height:calc(100vh - 90px);overflow-y:auto}' +
     '#walytech-rgb-panel .waly-rgb-abas{display:flex;gap:2px;margin-bottom:12px}' +
     '#walytech-rgb-panel .waly-rgb-aba{flex:1;padding:6px 2px 8px;text-align:center;background:none;border:0;border-bottom:2px solid rgba(255,255,255,.08);color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;line-height:1.2}' +
@@ -652,7 +613,7 @@
     '#walytech-rgb-panel .waly-teclas-rot{opacity:.9;font-size:12px}' +
     '#walytech-rgb-panel .waly-teclas-tecla{padding:3px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:12px;text-align:center;white-space:nowrap}' +
     '#walytech-rgb-panel .waly-teclas-tecla:hover{background:rgba(255,255,255,.16)}' +
-    '#walytech-rgb-panel .waly-teclas-gravando{border-color:#4ADE80;color:#4ADE80}' +
+    '#walytech-rgb-panel .waly-teclas-gravando{border-color:#4ADE80;color:#4ADE80;animation:waly-teclas-pisca .9s infinite alternate}' +
     '#walytech-rgb-panel .waly-av-anota{opacity:.75;margin-bottom:10px;line-height:1.4}' +
     '#walytech-rgb-panel .waly-av-grupo{margin-top:12px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;opacity:.5}' +
     '#walytech-rgb-panel .waly-av-desc{opacity:.55;font-size:11px;line-height:1.45;margin:3px 0 7px}' +
@@ -948,6 +909,7 @@
   function loopNota() {
     try {
       injetarNota();
+      if (!lerNgToken()) return;
       if (notaCache === null && notaUltimaTentativa && Date.now() - notaUltimaTentativa < 5 * 60 * 1000) return;
       var velha = Date.now() - notaCacheHora > 5 * 60 * 1000;
       if ((notaCache === null || velha) && !notaBuscando) buscarNota();
@@ -1283,6 +1245,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   function carregarChats(forca) {
     var m = mapaFotos();
     if (!Object.keys(m).length) return;
+    if (!colegasLigados()) return;
     var agora = Date.now();
     if (!forca && chatLista.length && agora - chatListaHora < FOTO_CHAT_CACHE_MS) return;
     if (chatBuscando) return;
@@ -1884,6 +1847,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       '<label class="waly-bg-ligado"><input type="checkbox" id="waly-hub-bg-on"> Mostrar imagem de fundo</label>' +
       '<label class="waly-rgb-linha">Intensidade <span class="waly-rgb-bval" id="waly-hub-bg-val"></span></label>' +
       '<input type="range" class="waly-rgb-range" id="waly-hub-bg-range" min="' + BGBRILHO_MIN + '" max="' + BGBRILHO_MAX + '" step="1">' +
+      '<label class="waly-rgb-linha">Opacidade <span class="waly-rgb-bval" id="waly-hub-bg-op-val"></span></label>' +
+      '<input type="range" class="waly-rgb-range" id="waly-hub-bg-op-range" min="' + BGOP_MIN + '" max="' + BGOP_MAX + '" step="1">' +
       '<div class="waly-bg-acoes">' +
       '<button type="button" class="waly-rgb-reset" id="waly-hub-bg-trocar">Importar imagem</button>' +
       '<button type="button" class="waly-rgb-reset waly-bg-remover" id="waly-hub-bg-remover">Remover</button>' +
@@ -1990,6 +1955,12 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     var bgR = painel.querySelector('#waly-hub-bg-range');
     bgR.addEventListener('input', function () {
       try { localStorage.setItem(BGBRILHO_KEY, this.value); } catch (e) {}
+      atualizarHub();
+      bgAtualizar();
+    });
+    var bgOpR = painel.querySelector('#waly-hub-bg-op-range');
+    bgOpR.addEventListener('input', function () {
+      try { localStorage.setItem(BGOP_KEY, this.value); } catch (e) {}
       atualizarHub();
       bgAtualizar();
     });
@@ -2144,6 +2115,9 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       var b = bgBrilho();
       painel.querySelector('#waly-hub-bg-range').value = b;
       painel.querySelector('#waly-hub-bg-val').textContent = (b > 0 ? '+' : '') + b;
+      var op = bgOpacidade();
+      painel.querySelector('#waly-hub-bg-op-range').value = op;
+      painel.querySelector('#waly-hub-bg-op-val').textContent = op + '%';
       painel.querySelector('#waly-hub-bg-on').checked = bgLigado();
       painel.querySelector('#waly-hub-bg-remover').style.display = img ? '' : 'none';
       painel.querySelector('#waly-hub-bg-trocar').textContent = img ? 'Trocar imagem' : 'Importar imagem';
@@ -2224,6 +2198,14 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     } catch (e) { return 0; }
   }
 
+  function bgOpacidade() {
+    try {
+      var v = parseFloat(localStorage.getItem(BGOP_KEY));
+      if (isNaN(v)) return BGOP_MAX;
+      return Math.max(BGOP_MIN, Math.min(BGOP_MAX, v));
+    } catch (e) { return BGOP_MAX; }
+  }
+
   function bgLigado() {
     try { return localStorage.getItem(BG_ON_KEY) !== '0'; } catch (e) { return true; }
   }
@@ -2251,6 +2233,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
     raiz.classList.add('waly-bg');
     raiz.style.setProperty('--waly-bg-img', 'url("' + img.replace(/"/g, '\\"') + '")');
+    raiz.style.setProperty('--waly-bg-opacidade', (bgOpacidade() / 100).toFixed(3));
     var b = bgBrilho();
     var alfa = Math.abs(b) / 100 * 0.6;
     raiz.style.setProperty('--waly-bg-shade', b >= 0 ? 'rgba(255,255,255,' + alfa.toFixed(3) + ')' : 'rgba(0,0,0,' + alfa.toFixed(3) + ')');
@@ -2347,8 +2330,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8';
+  var SK_VERSION = '2.8.1';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.1';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
@@ -2367,7 +2350,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     try {
       var ultima = parseInt(localStorage.getItem('walytechUpdateCheck'), 10) || 0;
       if (!forca && Date.now() - ultima < 60 * 60 * 1000) return;
-      fetch(UPDATE_URL + '?t=' + Date.now(), { cache: 'no-store' })
+      fetch(UPDATE_URL + '&t=' + Date.now(), { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
         .then(function (txt) {
           localStorage.setItem('walytechUpdateCheck', String(Date.now()));
@@ -2385,7 +2368,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   function baixarAtualizacao() {
     try {
       console.log('[walytech] procurando atualizacao...');
-      fetch(UPDATE_URL + '?t=' + Date.now(), { cache: 'no-store' })
+      fetch(UPDATE_URL + '&t=' + Date.now(), { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
         .then(function (txt) {
           var m = txt.match(/@version\s+([\d.]+)/);
