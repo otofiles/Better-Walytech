@@ -176,19 +176,34 @@
         }
         return null;
       })(dialog);
-      var header = title ? title.parentNode : (dialog.querySelector('div.min-w-0') || dialog);
+      var closeBtn = null;
+      var allBtns = dialog.querySelectorAll('button');
+      for (var b = 0; b < allBtns.length; b++) {
+        if ((allBtns[b].getAttribute('aria-label') || '').toLowerCase().indexOf('fechar') !== -1) { closeBtn = allBtns[b]; break; }
+      }
+      // fallback pelo X
+      if (!closeBtn) {
+        for (var b = 0; b < allBtns.length; b++) {
+          if ((allBtns[b].textContent || '').trim() === '\u00d7' || (allBtns[b].innerHTML || '').indexOf('&#10005;') !== -1) { closeBtn = allBtns[b]; break; }
+        }
+      }
+      var container = closeBtn && closeBtn.parentNode ? closeBtn.parentNode : (dialog.querySelector('div.flex.items-center.justify-between') || dialog);
       var lapis = document.createElement('button');
       lapis.type = 'button';
       lapis.setAttribute('data-waly-cores-lapis', '1');
       lapis.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[16px] w-[16px]" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
-      lapis.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-left:8px;border:0;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;cursor:pointer';
+      lapis.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin-right:4px;border:0;background:none;color:#fff;cursor:pointer;padding:0;opacity:.7;';
       lapis.addEventListener('click', function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
         var coresSection = dialog.querySelector('[data-waly-cores-content]');
         if (coresSection) coresSection.style.display = coresSection.style.display === 'block' ? 'none' : 'block';
       });
-      header.appendChild(lapis);
+      if (closeBtn && closeBtn.parentNode) {
+        closeBtn.parentNode.insertBefore(lapis, closeBtn);
+      } else {
+        container.appendChild(lapis);
+      }
     }
     if (dialog.querySelector('[data-waly-cores-tab]')) return;
     console.log('[walytech] Personalizar Chat: dialogo encontrado, injetando aba Cores...');
