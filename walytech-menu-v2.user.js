@@ -165,7 +165,7 @@
   }
 
   function criarSecaoCores(dialog) {
-    var existing = dialog.querySelector('[data-waly-cores-content]');
+    var existing = document.querySelector('[data-waly-cores-content]');
     if (existing) return existing;
     var content = document.createElement('div');
     content.setAttribute('data-waly-cores-content', '1');
@@ -182,7 +182,7 @@
     }
     html += '<button type="button" data-waly-cores-reset style="width:100%;margin-top:12px;padding:8px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:12px">Restaurar padrões</button>';
     content.innerHTML = html;
-    dialog.appendChild(content);
+    document.body.appendChild(content);
     var inputs = content.querySelectorAll('[data-waly-cor-btn]');
     for (var i = 0; i < inputs.length; i++) {
       inputs[i].addEventListener('input', function () {
@@ -233,7 +233,7 @@
       lapis.addEventListener('click', function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        var coresSection = dialog.querySelector('[data-waly-cores-content]');
+        var coresSection = document.querySelector('[data-waly-cores-content]');
         if (!coresSection) coresSection = criarSecaoCores(dialog);
         if (coresSection) coresSection.style.display = coresSection.style.display === 'block' ? 'none' : 'block';
       });
@@ -273,7 +273,7 @@
     abaCores.textContent = 'Cores';
     abaCores.style.cssText = 'flex:1;padding:6px 2px 8px;text-align:center;background:none;border:0;border-bottom:2px solid rgba(255,255,255,.08);color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;line-height:1.2';
     abaCores.addEventListener('click', function () {
-      var coresSection = dialog.querySelector('[data-waly-cores-content]');
+      var coresSection = document.querySelector('[data-waly-cores-content]');
       if (coresSection) coresSection.style.display = 'block';
       var allTabs = tabBar.querySelectorAll('button');
       for (var i = 0; i < allTabs.length; i++) allTabs[i].style.borderBottomColor = 'rgba(255,255,255,.08)';
