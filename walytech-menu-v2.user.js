@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8.5
+// @version      2.8.4
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.5
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.5
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.4
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.4
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -219,6 +219,28 @@
   function loopPersonalizarChat() {
     try { injetarAbaCores(); } catch (e) {}
   }
+
+  window.__walytPersonalizarChatDebug = function () {
+    var dialog = detectarPersonalizarChat();
+    console.log('[walytech] Personalizar Chat dialogo detectado:', dialog ? 'SIM' : 'NAO');
+    if (dialog) {
+      console.log('[walytech] classes do dialogo:', dialog.className);
+      var tabs = [];
+      dialog.querySelectorAll('button').forEach(function (b) { tabs.push((b.textContent || '').trim()); });
+      console.log('[walytech] botoes no dialogo:', tabs.join(' | '));
+      console.log('[walytech] aba Cores ja injetada:', !!dialog.querySelector('[data-waly-cores-tab]'));
+    } else {
+      // Listar elementos com texto Personalizar Chat
+      var found = [];
+      document.querySelectorAll('*').forEach(function (el) {
+        if (el.children.length === 0 && (el.textContent || '').trim() === 'Personalizar Chat') {
+          found.push(el.tagName + ' #' + el.id + ' .' + el.className);
+        }
+      });
+      console.log('[walytech] elementos com texto Personalizar Chat encontrados:', found.length);
+      found.slice(0, 5).forEach(function (f) { console.log('  -', f); });
+    }
+  };
 
   var MARCA = 'data-walytech-nav';
   var MARCA_GRUPO = 'data-walytech-navwrap';
@@ -2328,8 +2350,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8.5';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.5';
+  var SK_VERSION = '2.8.4';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.4';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
