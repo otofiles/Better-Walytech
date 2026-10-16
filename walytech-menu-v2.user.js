@@ -164,6 +164,43 @@
     return null;
   }
 
+  function criarSecaoCores(dialog) {
+    var existing = dialog.querySelector('[data-waly-cores-content]');
+    if (existing) return existing;
+    var content = document.createElement('div');
+    content.setAttribute('data-waly-cores-content', '1');
+    content.style.cssText = 'padding:16px;max-height:60vh;overflow-y:auto;display:none';
+    var html = '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;margin:0 0 12px">Cores dos botões do chat</div>';
+    for (var i = 0; i < BOTOES_CORES.length; i++) {
+      var b = BOTOES_CORES[i];
+      var saved = coresBotoesSalvas();
+      var val = saved['--waly-btn-' + b.k] || b.pad;
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,.07)">' +
+        '<span style="font-size:12px;opacity:.9">' + b.rot + '</span>' +
+        '<input type="color" data-waly-cor-btn="' + b.k + '" value="' + val + '" style="width:34px;height:24px;border:0;background:none;cursor:pointer;padding:0">' +
+        '</div>';
+    }
+    html += '<button type="button" data-waly-cores-reset style="width:100%;margin-top:12px;padding:8px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:12px">Restaurar padrões</button>';
+    content.innerHTML = html;
+    dialog.appendChild(content);
+    var inputs = content.querySelectorAll('[data-waly-cor-btn]');
+    for (var i = 0; i < inputs.length; i++) {
+      inputs[i].addEventListener('input', function () {
+        salvarCorBotao(this.getAttribute('data-waly-cor-btn'), this.value);
+      });
+    }
+    var resetBtn = content.querySelector('[data-waly-cores-reset]');
+    if (resetBtn) resetBtn.addEventListener('click', function () {
+      try { localStorage.removeItem(CORES_BOTOES_KEY); } catch (e) {}
+      for (var i = 0; i < inputs.length; i++) {
+        var k = inputs[i].getAttribute('data-waly-cor-btn');
+        inputs[i].value = BOTOES_CORES[i].pad;
+      }
+      aplicarCor(corSalva(), false);
+    });
+    return content;
+  }
+
   function injetarAbaCores() {
     if (document.querySelector('[data-waly-cores-tab]')) return;
     var dialog = detectarPersonalizarChat();
@@ -197,6 +234,7 @@
         ev.preventDefault();
         ev.stopPropagation();
         var coresSection = dialog.querySelector('[data-waly-cores-content]');
+        if (!coresSection) coresSection = criarSecaoCores(dialog);
         if (coresSection) coresSection.style.display = coresSection.style.display === 'block' ? 'none' : 'block';
       });
       if (closeBtn && closeBtn.parentNode) {
@@ -204,6 +242,7 @@
       } else {
         container.appendChild(lapis);
       }
+      criarSecaoCores(dialog);
     }
     if (dialog.querySelector('[data-waly-cores-tab]')) return;
     console.log('[walytech] Personalizar Chat: dialogo encontrado, injetando aba Cores...');
@@ -241,36 +280,7 @@
       abaCores.style.borderBottomColor = '#fff';
     });
     tabBar.appendChild(abaCores);
-    var content = document.createElement('div');
-    content.setAttribute('data-waly-cores-content', '1');
-    content.style.cssText = 'padding:16px;max-height:60vh;overflow-y:auto';
-    var html = '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;margin:0 0 12px">Cores dos botões do chat</div>';
-    for (var i = 0; i < BOTOES_CORES.length; i++) {
-      var b = BOTOES_CORES[i];
-      var saved = coresBotoesSalvas();
-      var val = saved['--waly-btn-' + b.k] || b.pad;
-      html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,.07)">' +
-        '<span style="font-size:12px;opacity:.9">' + b.rot + '</span>' +
-        '<input type="color" data-waly-cor-btn="' + b.k + '" value="' + val + '" style="width:34px;height:24px;border:0;background:none;cursor:pointer;padding:0">' +
-        '</div>';
-    }
-    html += '<button type="button" data-waly-cores-reset style="width:100%;margin-top:12px;padding:8px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:12px">Restaurar padrões</button>';
-    content.innerHTML = html;
-    dialog.appendChild(content);
-    var inputs = content.querySelectorAll('[data-waly-cor-btn]');
-    for (var i = 0; i < inputs.length; i++) {
-      inputs[i].addEventListener('input', function () {
-        salvarCorBotao(this.getAttribute('data-waly-cor-btn'), this.value);
-      });
-    }
-    content.querySelector('[data-waly-cores-reset]').addEventListener('click', function () {
-      try { localStorage.removeItem(CORES_BOTOES_KEY); } catch (e) {}
-      for (var i = 0; i < inputs.length; i++) {
-        var k = inputs[i].getAttribute('data-waly-cor-btn');
-        inputs[i].value = BOTOES_CORES[i].pad;
-      }
-      aplicarCor(corSalva(), false);
-    });
+    var content = criarSecaoCores(dialog);
   }
 
   function loopPersonalizarChat() {
