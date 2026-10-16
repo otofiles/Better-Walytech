@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8.3
+// @version      2.8.4
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.3
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.3
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.4
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.4
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -33,19 +33,6 @@
     return false;
   }
 
-  function grupoAcoesHeader() {
-    var h = getHeader();
-    if (!h) return null;
-    return h.querySelector('.flex.shrink-0.items-center.gap-0\\.5');
-  }
-
-  function getDots() {
-    var h = getHeader();
-    if (!h) return null;
-    var todos = h.querySelectorAll('button[aria-haspopup="menu"]');
-    return todos.length ? todos[todos.length - 1] : null;
-  }
-
   function norm(s) {
     return (s || '')
       .normalize('NFD')
@@ -54,227 +41,6 @@
       .trim()
       .toLowerCase();
   }
-
-  function listarMenus() {
-    var menus = document.querySelectorAll('[role="menu"][data-state="open"]');
-    console.log('[walytech] menus abertos:', menus.length);
-    menus.forEach(function (m) {
-      var itens = [];
-      m.querySelectorAll('[role="menuitem"]').forEach(function (i) {
-        itens.push('"' + i.textContent.trim() + '"');
-      });
-      console.log('[walytech]  - itens do menu:', itens.length ? itens.join(', ') : '(nenhum item)');
-    });
-    return menus;
-  }
-
-  function disp(elm, tipo, props) {
-    try {
-      elm.dispatchEvent(new PointerEvent(tipo, props));
-    } catch (e) {
-      elm.dispatchEvent(new MouseEvent(tipo, { bubbles: true, cancelable: true, view: window, button: 0 }));
-    }
-  }
-
-  var ignorarGatilhoDots = false;
-
-  function abrirTrigger(btn3) {
-    btn3.focus();
-    ignorarGatilhoDots = true;
-    try {
-      disp(btn3, 'pointerdown', {
-        bubbles: true, cancelable: true, view: window, button: 0, buttons: 1,
-        pointerId: 1, pointerType: 'mouse', isPrimary: true
-      });
-    } finally {
-      setTimeout(function () { ignorarGatilhoDots = false; }, 0);
-    }
-  }
-
-  function clicar3PontosNativo(btn3) {
-    if (!btn3) return;
-    ignorarGatilhoDots = true;
-    try { btn3.click(); } catch (e) {}
-    setTimeout(function () { ignorarGatilhoDots = false; }, 0);
-  }
-
-  function clicarItem(item) {
-    disp(item, 'pointerdown', {
-      bubbles: true, cancelable: true, view: window, button: 0, buttons: 1,
-      pointerId: 1, pointerType: 'mouse', isPrimary: true
-    });
-    disp(item, 'pointerup', {
-      bubbles: true, cancelable: true, view: window, button: 0, buttons: 0,
-      pointerId: 1, pointerType: 'mouse', isPrimary: true
-    });
-    item.click();
-  }
-
-  function estaAberto() {
-    return document.querySelector('[role="menu"][data-state="open"]');
-  }
-
-  function executar(nome) {
-    var btn3 = getDots();
-    if (!btn3) {
-      console.log('[walytech] 3 pontinhos NAO encontrado para', nome);
-      return;
-    }
-    var n = norm(nome);
-    console.log('[walytech] abrindo menu para:', nome);
-
-    setTimeout(function () {
-      var abriu = false;
-      var abertoUmaVez = false;
-      var desistiu = false;
-      var tentativas = 0;
-      var timer = setInterval(function () {
-        tentativas++;
-        var menus = document.querySelectorAll('[role="menu"][data-state="open"]');
-        if (menus.length > 0) abriu = true;
-
-        if (!estaAberto() && !abertoUmaVez && !desistiu) {
-          abertoUmaVez = true;
-          abrirTrigger(btn3);
-        }
-
-        if (!estaAberto() && abertoUmaVez) {
-          return;
-        }
-
-        var target = null;
-        document.querySelectorAll('[role="menu"][data-state="open"]').forEach(function (m) {
-          var itens = m.querySelectorAll('[role="menuitem"]');
-          for (var i = 0; i < itens.length; i++) {
-            if (!target && norm(itens[i].textContent) === n) target = itens[i];
-          }
-        });
-        if (!target) {
-          document.querySelectorAll('[role="menu"][data-state="open"]').forEach(function (m) {
-            var itens = m.querySelectorAll('[role="menuitem"]');
-            for (var i = 0; i < itens.length; i++) {
-              var t = norm(itens[i].textContent);
-              if (!target && t && t.indexOf(n) !== -1) target = itens[i];
-            }
-          });
-        }
-
-        if (target) {
-          clearInterval(timer);
-          console.log('[walytech] opcao encontrada, clicando:', nome);
-          clicarItem(target);
-        } else if (tentativas >= 35) {
-          clearInterval(timer);
-          if (abriu) {
-            console.log('[walytech] menu ABRIU mas nao achei a opcao', nome);
-            listarMenus();
-          } else {
-            console.log('[walytech] menu NUNCA abriu para', nome);
-          }
-          if (estaAberto()) clicar3PontosNativo(btn3);
-        }
-      }, 120);
-    }, 50);
-  }
-
-  function limparHeaderAcoes() {
-    var h = getHeader();
-    if (!h) return;
-    var g = grupoAcoesHeader();
-    if (!g) return;
-    var menus = [];
-    g.querySelectorAll('button').forEach(function (b) {
-      if (botaoInvisivel(b)) return;
-      var ehNosso = b.hasAttribute('data-walytech') || b.hasAttribute('data-walytech-rgb') || b.hasAttribute('data-walytech-timer');
-      if (ehNosso) { b.style.display = ''; b.removeAttribute('data-waly-btn'); return; }
-      var la = norm(b.getAttribute('aria-label') || '');
-      var ehMenu = b.getAttribute('aria-haspopup') === 'menu';
-      if (ehMenu) {
-        menus.push(b);
-        b.style.display = 'none';
-        b.removeAttribute('data-waly-btn');
-        return;
-      }
-      var manter = /finali[sz]|finish|terminar|terminar atendimento/.test(la) ||
-        /transfer/.test(la) ||
-        /fechar conversa|close \w*(conversation|chat)|encerrar|cerrar/.test(la);
-      if (/finali[sz]|finish|terminar|terminar atendimento/.test(la)) b.setAttribute('data-waly-btn', 'fin');
-      else if (/transfer/.test(la)) b.setAttribute('data-waly-btn', 'trans');
-      else if (/fechar conversa|close \w*(conversation|chat)|encerrar|cerrar/.test(la)) b.setAttribute('data-waly-btn', 'fech');
-      else b.removeAttribute('data-waly-btn');
-      b.style.display = manter ? '' : 'none';
-    });
-    if (menus.length) {
-      var ultimoMenu = menus[menus.length - 1];
-      ultimoMenu.style.display = '';
-      ultimoMenu.setAttribute('data-waly-btn', 'dots');
-    }
-    var num = h.querySelector('span.max-w-xs.shrink-0.truncate');
-    if (num) num.setAttribute('data-waly-num', '');
-  }
-
-  function tipoDoBotao(b) {
-    if (!b) return '';
-    var la = norm((b.getAttribute('aria-label') || '') + ' ' + (b.textContent || ''));
-    var svg = b.querySelector('svg');
-    var inner = svg ? svg.innerHTML : '';
-    if (/pesquis|search|buscar/.test(la) || inner.indexOf('m21 21-4.3') !== -1 || inner.indexOf('m21 21-4.34') !== -1 || inner.indexOf('m21 21-4.35') !== -1) return 'pesquisar';
-    if (/tag|etiqueta/.test(la) || inner.indexOf('M13.172 2a2') !== -1) return 'tags';
-    if (/soltar|pop.?out/.test(la) || inner.indexOf('M21 9V6a2 2 0 0 0-2-2H4') !== -1) return 'soltar';
-    if (/detalhe|detail/.test(la) || inner.indexOf('M15 3v18') !== -1) return 'detalhes';
-    return '';
-  }
-
-  function acharBotoesNativos() {
-    var res = { pesquisar: null, tags: null, soltar: null, detalhes: null };
-    var g = grupoAcoesHeader();
-    if (g) {
-      var buttons = g.querySelectorAll('button');
-      for (var i = 0; i < buttons.length; i++) {
-        var b = buttons[i];
-        if (botaoInvisivel(b)) continue;
-        if (b.getAttribute('aria-haspopup') === 'menu') continue;
-        var tipo = tipoDoBotao(b);
-        if (tipo && !res[tipo]) res[tipo] = b;
-      }
-    }
-    if (!res.pesquisar || !res.tags || !res.soltar || !res.detalhes) {
-      var itens = document.querySelectorAll('[role="menu"][data-state="open"] [role="menuitem"]');
-      for (var k = 0; k < itens.length; k++) {
-        var it = itens[k];
-        var tipo2 = tipoDoBotao(it);
-        if (tipo2 && !res[tipo2]) res[tipo2] = it;
-      }
-    }
-    return res;
-  }
-
-  function executarNativo(tipo) {
-    var btn3 = getDots();
-    abrirTrigger(btn3);
-    setTimeout(function () {
-      var n = acharBotoesNativos();
-      var b = n[tipo];
-      if (!b) return;
-      try { b.click(); } catch (e) {}
-    }, 120);
-  }
-
-  function clicarAcaoHeader(la) {
-    var alvo = norm(la);
-    var buttons = document.querySelectorAll('button');
-    for (var i = 0; i < buttons.length; i++) {
-      var b = buttons[i];
-      if (botaoInvisivel(b)) continue;
-      if (b.getAttribute('aria-haspopup') === 'menu') continue;
-      if (norm(b.getAttribute('aria-label') || '') === alvo) {
-        try { b.click(); return true; } catch (e) { return false; }
-      }
-    }
-    return false;
-  }
-
-  var painelDots = null;
 
   function ehPotencial() {
     var h = getHeader();
@@ -288,132 +54,163 @@
     return false;
   }
 
-  function atualizarItensDots() {
-    if (!painelDots) return;
-    var mostrar = ehPotencial();
-    var rem = painelDots.querySelector('[data-waly-dots-item="remover"]');
-    var sep = painelDots.querySelector('[data-waly-dots-sep="remover"]');
-    if (rem) rem.style.display = mostrar ? '' : 'none';
-    if (sep) sep.style.display = mostrar ? '' : 'none';
+  function chaveDoBotao(b) {
+    if (!b) return '';
+    var la = norm(b.getAttribute('aria-label') || '');
+    var svg = b.querySelector('svg');
+    var inner = svg ? svg.innerHTML : '';
+    if (/finali[sz]|finish|terminar|terminar atendimento/.test(la)) return 'fin';
+    if (/transfer/.test(la)) return 'trans';
+    if (/fechar conversa|close \w*(conversation|chat)|encerrar|cerrar/.test(la)) return 'fech';
+    if (/ligar|call/.test(la) || inner.indexOf('M22 16.92v3a2 2 0 0 1-2.18 2') !== -1) return 'ligar';
+    if (/pesquis|search|buscar/.test(la) || inner.indexOf('m21 21-4.3') !== -1 || inner.indexOf('m21 21-4.34') !== -1 || inner.indexOf('m21 21-4.35') !== -1) return 'pesquisar';
+    if (/tag|etiqueta/.test(la) || inner.indexOf('M13.172 2a2') !== -1) return 'tag';
+    if (/soltar|pop.?out/.test(la) || inner.indexOf('M21 9V6a2 2 0 0 0-2-2H4') !== -1) return 'soltar';
+    if (/detalhe|detail/.test(la) || inner.indexOf('M15 3v18') !== -1) return 'detalhes';
+    if (/encaminhar|forward/.test(la) || inner.indexOf('m15 17 5-5-5-5') !== -1) return 'encaminhar';
+    if (/nao.?lido|mark.?unread|unread/.test(la) || inner.indexOf('m22 7-8.97 5.7') !== -1) return 'naoLido';
+    if (/remover|remove/.test(la) || inner.indexOf('M3 6h18') !== -1) return ehPotencial() ? 'removerPotencial' : 'removerRetorno';
+    if (/webchat/.test(la) || inner.indexOf('M7.9 20A9 9 0 1 0 4 16.1L2 22Z') !== -1) return 'webchat';
+    return '';
   }
 
-  function svgDots(caminhos) {
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + caminhos + '</svg>';
-  }
-
-  function itensDots() {
-    return [
-      { chave: 'encaminhar', rot: 'Encaminhar Mensagens', nativo: 'Encaminhar Mensagens', icone: svgDots('<path d="m15 17 5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/>') },
-      { chave: 'naolidi', rot: 'Marcar como Não Lido', nativo: 'Marcar como Não Lido', icone: svgDots('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>') },
-      { sep: true },
-      { chave: 'pesquisar', rot: 'Pesquisar na conversa', la: 'Pesquisar', alt: 'Pesquisar', icone: svgDots('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>') },
-      { chave: 'tags', rot: 'Adicionar Tag', la: 'Adicionar Tag', alt: 'Adicionar Tag', icone: svgDots('<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>') },
-      { chave: 'soltar', rot: 'Soltar chat', la: 'Soltar Chat', alt: 'Soltar Chat', icone: svgDots('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>') },
-      { chave: 'detalhes', rot: 'Detalhes do contato', la: 'Detalhes do Contato', alt: 'Detalhes do Contato', icone: svgDots('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>') },
-      { chave: 'ligar', rot: 'Ligar', la: 'Ligar', alt: 'Ligar', icone: svgDots('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>') },
-      { sep: 'remover' },
-      { chave: 'remover', rot: 'Remover', nativo: 'Remover', perigo: true, somentePotencial: true, icone: svgDots('<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>') }
-    ];
-  }
-
-  function criarPainelDots() {
-    if (painelDots && document.body && document.body.contains(painelDots)) return;
-    painelDots = document.createElement('div');
-    painelDots.id = 'walytech-dots-panel';
-    var html = '<div class="waly-dots-topo"><span>Ações do chat</span><button type="button" class="waly-rgb-x" aria-label="Fechar">&#10005;</button></div>';
-    var itens = itensDots();
-    for (var i = 0; i < itens.length; i++) {
-      var it = itens[i];
-      if (it.sep) { html += '<div class="waly-dots-sep" data-waly-dots-sep="' + (it.sep === true ? '1' : it.sep) + '"></div>'; continue; }
-      html += '<button type="button" class="waly-dots-item' + (it.perigo ? ' waly-dots-perigo' : '') + '" data-waly-dots-item="' + it.chave + '">' + it.icone + '<span>' + it.rot + '</span></button>';
+  function marcarBotoesHeader() {
+    var h = getHeader();
+    if (!h) return;
+    var btns = h.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) {
+      var b = btns[i];
+      if (botaoInvisivel(b)) continue;
+      var chave = chaveDoBotao(b);
+      if (chave) b.setAttribute('data-waly-btn', chave);
+      else b.removeAttribute('data-waly-btn');
     }
-    painelDots.innerHTML = html;
-    document.body.appendChild(painelDots);
-    painelDots.querySelector('.waly-rgb-x').addEventListener('click', function (ev) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      fecharPainelDots();
-    });
-    var btns = painelDots.querySelectorAll('[data-waly-dots-item]');
-    for (var k = 0; k < btns.length; k++) {
-      btns[k].addEventListener('click', function (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        acionarItemDots(this.getAttribute('data-waly-dots-item'));
-      });
+    var num = h.querySelector('span.max-w-xs.shrink-0.truncate');
+    if (num) num.setAttribute('data-waly-num', '');
+  }
+
+  function marcarMenus() {
+    var menus = document.querySelectorAll('[role="menu"][data-state="open"] [role="menuitem"]');
+    for (var i = 0; i < menus.length; i++) {
+      var m = menus[i];
+      var chave = chaveDoBotao(m);
+      if (chave) m.setAttribute('data-waly-btn', chave);
     }
-    atualizarItensDots();
   }
-
-  function acionarItemDots(chave) {
-    var itens = itensDots();
-    var it = null;
-    for (var i = 0; i < itens.length; i++) if (itens[i].chave === chave) it = itens[i];
-    if (!it) return;
-    if (it.somentePotencial && !ehPotencial()) return;
-    fecharPainelDots();
-    if (it.nativo) { executar(it.nativo); return; }
-    var clicou = clicarAcaoHeader(it.la);
-    if (!clicou && it.alt) setTimeout(function () { executar(it.alt); }, 40);
-  }
-
-  function posicionarPainelDots(btn) {
-    var r = btn.getBoundingClientRect();
-    painelDots.style.top = (r.bottom + 8) + 'px';
-    painelDots.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
-    painelDots.style.left = 'auto';
-  }
-
-  function abrirPainelDots(btn) {
-    if (!btn) return;
-    if (!painelDots) criarPainelDots();
-    atualizarItensDots();
-    if (painel && painel.classList.contains('waly-aberto')) fecharPainel();
-    if (painelTimer && painelTimer.classList.contains('waly-aberto')) fecharPainelTimer();
-    if (estaAberto()) clicar3PontosNativo(btn);
-    posicionarPainelDots(btn);
-    painelDots.classList.add('waly-aberto');
-  }
-
-  function fecharPainelDots() {
-    if (painelDots) painelDots.classList.remove('waly-aberto');
-  }
-
-  function alternarPainelDots(btn) {
-    if (painelDots && painelDots.classList.contains('waly-aberto')) { fecharPainelDots(); return; }
-    abrirPainelDots(btn);
-  }
-
-  function ligarGatilhoDots() {
-    var btn3 = getDots();
-    if (!btn3) return;
-    if (btn3.getAttribute('data-walytech-dots-gatilho') === '1') return;
-    btn3.setAttribute('data-walytech-dots-gatilho', '1');
-    btn3.addEventListener('pointerdown', function (ev) {
-      if (ignorarGatilhoDots) return;
-      if (ev.button !== 0) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
-    }, true);
-    btn3.addEventListener('click', function (ev) {
-      if (ignorarGatilhoDots) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
-      alternarPainelDots(btn3);
-    }, true);
-  }
-
-  function prepararMenuDots() {
-    criarPainelDots();
-    ligarGatilhoDots();
-  }
-
 
   function loopBotoes() {
-    try { limparHeaderAcoes(); } catch (e) { console.log('[walytech] erro:', e.message); }
-    try { prepararMenuDots(); } catch (e) { console.log('[walytech] erro:', e.message); }
+    try { marcarBotoesHeader(); } catch (e) { console.log('[walytech] erro:', e.message); }
+    try { marcarMenus(); } catch (e) { console.log('[walytech] erro:', e.message); }
+  }
+
+  var CORES_BOTOES_KEY = 'walytechCoresBotoes';
+  var BOTOES_CORES = [
+    { k: 'fin', rot: 'Finalizar', pad: '#dc2626' },
+    { k: 'trans', rot: 'Transferir', pad: '#94a3b8' },
+    { k: 'fech', rot: 'Fechar conversa', pad: '#94a3b8' },
+    { k: 'ligar', rot: 'Ligar', pad: '#94a3b8' },
+    { k: 'pesquisar', rot: 'Pesquisar', pad: '#94a3b8' },
+    { k: 'tag', rot: 'Adicionar Tag', pad: '#94a3b8' },
+    { k: 'soltar', rot: 'Soltar Chat', pad: '#94a3b8' },
+    { k: 'detalhes', rot: 'Detalhes do Contato', pad: '#94a3b8' },
+    { k: 'encaminhar', rot: 'Encaminhar Mensagens', pad: '#94a3b8' },
+    { k: 'naoLido', rot: 'Marcar como Não Lido', pad: '#94a3b8' },
+    { k: 'removerRetorno', rot: 'Remover (retorno)', pad: '#94a3b8' },
+    { k: 'removerPotencial', rot: 'Remover (potencial)', pad: '#94a3b8' },
+    { k: 'webchat', rot: 'Envio pelo Webchat', pad: '#94a3b8' }
+  ];
+
+  function coresBotoesSalvas() {
+    try {
+      var o = JSON.parse(localStorage.getItem(CORES_BOTOES_KEY) || '{}');
+      return o && typeof o === 'object' ? o : {};
+    } catch (e) { return {}; }
+  }
+
+  function salvarCorBotao(chave, cor) {
+    try {
+      var o = coresBotoesSalvas();
+      if (cor) o[chave] = cor;
+      else delete o[chave];
+      localStorage.setItem(CORES_BOTOES_KEY, JSON.stringify(o));
+    } catch (e) {}
+    aplicarCor(corSalva(), false);
+  }
+
+  function detectarPersonalizarChat() {
+    var titulos = document.querySelectorAll('div, span, h1, h2, h3, h4, h5, h6');
+    for (var i = 0; i < titulos.length; i++) {
+      if (titulos[i].textContent === 'Personalizar Chat' && titulos[i].children.length === 0) {
+        var dialog = titulos[i].closest('[role="dialog"], [data-state="open"]');
+        if (dialog) return dialog;
+      }
+    }
+    return null;
+  }
+
+  function injetarAbaCores() {
+    var dialog = detectarPersonalizarChat();
+    if (!dialog) return;
+    if (dialog.querySelector('[data-waly-cores-tab]')) return;
+    var tabs = dialog.querySelectorAll('button');
+    var tabBar = null;
+    for (var i = 0; i < tabs.length; i++) {
+      var t = tabs[i];
+      if (t.textContent === 'Ações do Chat' || t.textContent === 'Lista de Atendimentos') {
+        tabBar = t.parentNode;
+        break;
+      }
+    }
+    if (!tabBar) return;
+    var abaCores = document.createElement('button');
+    abaCores.type = 'button';
+    abaCores.setAttribute('data-waly-cores-tab', '1');
+    abaCores.textContent = 'Cores';
+    abaCores.style.cssText = 'flex:1;padding:6px 2px 8px;text-align:center;background:none;border:0;border-bottom:2px solid rgba(255,255,255,.08);color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;line-height:1.2';
+    abaCores.addEventListener('click', function () {
+      var sections = dialog.querySelectorAll('[data-waly-cores-section]');
+      for (var i = 0; i < sections.length; i++) sections[i].style.display = 'none';
+      var coresSection = dialog.querySelector('[data-waly-cores-content]');
+      if (coresSection) coresSection.style.display = 'block';
+      var allTabs = tabBar.querySelectorAll('button');
+      for (var i = 0; i < allTabs.length; i++) allTabs[i].style.borderBottomColor = 'rgba(255,255,255,.08)';
+      abaCores.style.borderBottomColor = '#fff';
+    });
+    tabBar.appendChild(abaCores);
+    var content = document.createElement('div');
+    content.setAttribute('data-waly-cores-content', '1');
+    content.style.cssText = 'padding:16px;max-height:60vh;overflow-y:auto';
+    var html = '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;margin:0 0 12px">Cores dos botões do chat</div>';
+    for (var i = 0; i < BOTOES_CORES.length; i++) {
+      var b = BOTOES_CORES[i];
+      var saved = coresBotoesSalvas();
+      var val = saved['--waly-btn-' + b.k] || b.pad;
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,.07)">' +
+        '<span style="font-size:12px;opacity:.9">' + b.rot + '</span>' +
+        '<input type="color" data-waly-cor-btn="' + b.k + '" value="' + val + '" style="width:34px;height:24px;border:0;background:none;cursor:pointer;padding:0">' +
+        '</div>';
+    }
+    html += '<button type="button" data-waly-cores-reset style="width:100%;margin-top:12px;padding:8px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:12px">Restaurar padrões</button>';
+    content.innerHTML = html;
+    dialog.appendChild(content);
+    var inputs = content.querySelectorAll('[data-waly-cor-btn]');
+    for (var i = 0; i < inputs.length; i++) {
+      inputs[i].addEventListener('input', function () {
+        salvarCorBotao(this.getAttribute('data-waly-cor-btn'), this.value);
+      });
+    }
+    content.querySelector('[data-waly-cores-reset]').addEventListener('click', function () {
+      try { localStorage.removeItem(CORES_BOTOES_KEY); } catch (e) {}
+      for (var i = 0; i < inputs.length; i++) {
+        var k = inputs[i].getAttribute('data-waly-cor-btn');
+        inputs[i].value = BOTOES_CORES[i].pad;
+      }
+      aplicarCor(corSalva(), false);
+    });
+  }
+
+  function loopPersonalizarChat() {
+    try { injetarAbaCores(); } catch (e) {}
   }
 
   var MARCA = 'data-walytech-nav';
@@ -1875,14 +1672,6 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     { nome: 'Fundo dos cards', var: '--card' },
     { nome: 'Cor de borda', var: '--border' },
     { nome: 'Erro / destrutivo', var: '--destructive' },
-    { grupo: 'Botões do header', desc: 'Ícone e fundo quando o mouse passa por cima. Sem alteração, o app mantém a cor nativa.', nome: 'Finalizar — ícone', var: '--waly-fin', pad: '#dc2626' },
-    { nome: 'Finalizar — hover', var: '--waly-fin-h', pad: '#b91c1c' },
-    { nome: 'Transferir — ícone', var: '--waly-trans', pad: '#94a3b8' },
-    { nome: 'Transferir — hover', var: '--waly-trans-h', pad: '#94a3b8' },
-    { nome: 'Fechar conversa — ícone', var: '--waly-fech', pad: '#94a3b8' },
-    { nome: 'Fechar conversa — hover', var: '--waly-fech-h', pad: '#94a3b8' },
-    { nome: '3 pontinhos — ícone', var: '--waly-dots', pad: '#94a3b8' },
-    { nome: '3 pontinhos — hover', var: '--waly-dots-h', pad: '#94a3b8' },
     { grupo: 'Atendimento', desc: 'Número do contato que aparece no topo da conversa.', nome: 'Número do contato', var: '--waly-num', pad: '#94a3b8' },
     { grupo: 'Presença', desc: 'Dot de status ao lado da sua foto no topo. Vermelho quando offline.', nome: 'Dot de offline', var: '--waly-off', pad: '#B22123' }
   ];
@@ -1925,18 +1714,25 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     var o = avancSalvo();
     var r = [];
     var bt = [
-      { k: 'fin', sel: '[data-waly-btn="fin"]', padI: '#dc2626', padH: '#b91c1c' },
-      { k: 'trans', sel: '[data-waly-btn="trans"]' },
-      { k: 'fech', sel: '[data-waly-btn="fech"]' },
-      { k: 'dots', sel: '[data-waly-btn="dots"]' }
+      { k: 'fin', sel: '[data-waly-btn="fin"]', pad: '#dc2626' },
+      { k: 'trans', sel: '[data-waly-btn="trans"]', pad: '#94a3b8' },
+      { k: 'fech', sel: '[data-waly-btn="fech"]', pad: '#94a3b8' },
+      { k: 'ligar', sel: '[data-waly-btn="ligar"]', pad: '#94a3b8' },
+      { k: 'pesquisar', sel: '[data-waly-btn="pesquisar"]', pad: '#94a3b8' },
+      { k: 'tag', sel: '[data-waly-btn="tag"]', pad: '#94a3b8' },
+      { k: 'soltar', sel: '[data-waly-btn="soltar"]', pad: '#94a3b8' },
+      { k: 'detalhes', sel: '[data-waly-btn="detalhes"]', pad: '#94a3b8' },
+      { k: 'encaminhar', sel: '[data-waly-btn="encaminhar"]', pad: '#94a3b8' },
+      { k: 'naoLido', sel: '[data-waly-btn="naoLido"]', pad: '#94a3b8' },
+      { k: 'removerRetorno', sel: '[data-waly-btn="removerRetorno"]', pad: '#94a3b8' },
+      { k: 'removerPotencial', sel: '[data-waly-btn="removerPotencial"]', pad: '#94a3b8' },
+      { k: 'webchat', sel: '[data-waly-btn="webchat"]', pad: '#94a3b8' }
     ];
     for (var i = 0; i < bt.length; i++) {
-      var ic = o['--waly-' + bt[i].k] || bt[i].padI;
-      var hv = o['--waly-' + bt[i].k + '-h'] || bt[i].padH || ic;
-      if (ic) r.push(bt[i].sel + ' svg{stroke:' + ic + '!important;color:' + ic + '!important}');
-      if (hv) {
-        r.push(bt[i].sel + ':hover svg{stroke:' + hv + '!important;color:' + hv + '!important}');
-        r.push(bt[i].sel + ':hover{background-color:color-mix(in srgb,' + hv + ' 26%,transparent)!important}');
+      var c = o['--waly-btn-' + bt[i].k];
+      if (c) {
+        r.push(bt[i].sel + ' svg{stroke:' + c + '!important;color:' + c + '!important}');
+        r.push(bt[i].sel + ':hover{background-color:color-mix(in srgb,' + c + ' 26%,transparent)!important}');
       }
     }
     if (o['--waly-num']) r.push('html [data-waly-num]{color:' + o['--waly-num'] + '!important}');
@@ -2525,8 +2321,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8.3';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.3';
+  var SK_VERSION = '2.8.4';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.4';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
@@ -3026,8 +2822,35 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       if (bt) { try { bt.click(); } catch (e) {} }
       return;
     }
-    if (item.tipo === 'menu') { executar(item.alvo); return; }
-    if (item.tipo === 'nativo2') { executarNativo(item.alvo); return; }
+    if (item.tipo === 'menu') {
+      var h2 = getHeader();
+      if (!h2) return;
+      var btn3 = h2.querySelector('button[aria-haspopup="menu"]');
+      if (btn3) { try { btn3.click(); } catch (e) {} }
+      setTimeout(function () {
+        var menus = document.querySelectorAll('[role="menu"][data-state="open"] [role="menuitem"]');
+        for (var i = 0; i < menus.length; i++) {
+          if (norm(menus[i].textContent) === norm(item.alvo)) {
+            try { menus[i].click(); } catch (e) {}
+            return;
+          }
+        }
+      }, 120);
+      return;
+    }
+    if (item.tipo === 'nativo2') {
+      var h3 = getHeader();
+      if (!h3) return;
+      var btns = h3.querySelectorAll('button');
+      for (var i = 0; i < btns.length; i++) {
+        var b = btns[i];
+        if (botaoInvisivel(b)) continue;
+        if (b.getAttribute('aria-haspopup') === 'menu') continue;
+        var chave = chaveDoBotao(b);
+        if (chave === item.alvo) { try { b.click(); } catch (e) {} return; }
+      }
+      return;
+    }
     if (item.tipo === 'atualizar') { clicarAtualizar(true); return; }
   }
 
@@ -3072,17 +2895,12 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       var c3 = alvo.closest;
       if (!c3 || !c3.call(alvo, '[data-walytech-timer]')) fecharPainelTimer();
     }
-    if (painelDots && painelDots.classList.contains('waly-aberto') && !painelDots.contains(alvo)) {
-      var c4 = alvo.closest;
-      if (!c4 || !c4.call(alvo, '[data-walytech-dots-gatilho]')) fecharPainelDots();
-    }
   }, true);
 
   document.addEventListener('keydown', function (ev) {
     if (ev.key === 'Escape') {
       fecharPainel();
       fecharPainelTimer();
-      fecharPainelDots();
     }
   });
 
@@ -3110,6 +2928,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     avancReassert();
     atualizarHub();
     loopBotoes();
+    loopPersonalizarChat();
     loopLink();
     loopNaoLidas();
     loopStatusRodape();
@@ -3175,23 +2994,15 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
 
   window.__walytDebug = function () {
     var h = getHeader();
-    var btn3 = getDots();
     console.log('[walytech] header:', h ? 'sim' : 'nao');
-    console.log('[walytech] 3 pontinhos no header:', btn3 ? 'sim' : 'nao');
     if (h) {
-      var g = grupoAcoesHeader();
-      var botoes = g ? g.querySelectorAll('button') : [];
+      var botoes = h.querySelectorAll('button');
       var lista = [];
       botoes.forEach(function (b) {
         var marca = botaoInvisivel(b) ? '[medicao] ' : (b.style.display === 'none' ? '[oculto] ' : '');
         lista.push(marca + (b.getAttribute('aria-label') || '(sem rotulo)'));
       });
-      console.log('[walytech] botoes do grupo de acoes:', lista.length ? lista.join(' | ') : '(nenhum)');
-      var nat = acharBotoesNativos();
-      console.log('[walytech] nativos reconhecidos: pesquisar=' + (nat.pesquisar ? 'sim' : 'nao') +
-        ' tags=' + (nat.tags ? 'sim' : 'nao') +
-        ' soltar=' + (nat.soltar ? 'sim' : 'nao') +
-        ' detalhes=' + (nat.detalhes ? 'sim' : 'nao'));
+      console.log('[walytech] botoes do header:', lista.length ? lista.join(' | ') : '(nenhum)');
     }
     var chips = document.querySelectorAll('button.rounded-full');
     var ver = [];
@@ -3202,7 +3013,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   };
 
   window.__walytTest = function (nome) {
-    executar(nome);
+    console.log('[walytech] teste:', nome);
   };
 
   window.__walytTeclasDebug = function () {
@@ -3237,37 +3048,45 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   };
 
   window.__walytDump = function () {
-    var btn3 = getDots();
+    var h = getHeader();
+    if (!h) {
+      console.log('[walytech] header NAO encontrado');
+      return;
+    }
+    var btn3 = h.querySelector('button[aria-haspopup="menu"]');
     if (!btn3) {
-      console.log('[walytech] 3 pontinhos do header NAO encontrado');
+      console.log('[walytech] botao de menu do header NAO encontrado');
       return;
     }
     console.log('[walytech] abrindo menu do header para inspecao...');
-    abrirTrigger(btn3);
+    try { btn3.click(); } catch (e) {}
     var tentativas = 0;
     var timer = setInterval(function () {
       tentativas++;
       var menus = document.querySelectorAll('[role="menu"][data-state="open"]');
       if (menus.length > 0 || tentativas >= 30) {
         clearInterval(timer);
-        listarMenus();
-        clicar3PontosNativo(btn3);
+        var itens = [];
+        menus.forEach(function (m) {
+          m.querySelectorAll('[role="menuitem"]').forEach(function (i) {
+            itens.push('"' + i.textContent.trim() + '"');
+          });
+        });
+        console.log('[walytech] itens do menu:', itens.length ? itens.join(', ') : '(nenhum)');
+        try { btn3.click(); } catch (e) {}
         console.log('[walytech] menu inspecionado e fechado.');
       }
     }, 100);
   };
 
   window.__walytDotsDebug = function () {
-    var btn3 = getDots();
-    console.log('[walytech] 3 pontinhos:', btn3 ? 'sim' : 'nao');
-    console.log('[walytech] gatilho ligado no 3 pontinhos:', btn3 && btn3.getAttribute('data-walytech-dots-gatilho') === '1' ? 'sim' : 'nao');
-    console.log('[walytech] painel criado:', painelDots ? (painelDots.classList.contains('waly-aberto') ? 'aberto' : 'fechado') : 'nao');
-    console.log('[walytech] painel dentro do body:', painelDots && document.body.contains(painelDots) ? 'sim' : 'nao');
+    var h = getHeader();
+    console.log('[walytech] header:', h ? 'sim' : 'nao');
     var pot = ehPotencial();
-    console.log('[walytech] atendimento potencial (badge no header):', pot ? 'sim' : 'nao', '=> item "Remover":', pot ? 'aparece' : 'oculto');
-    var labels = ['Pesquisar', 'Adicionar Tag', 'Soltar Chat', 'Detalhes do Contato', 'Ligar'];
+    console.log('[walytech] atendimento potencial (badge no header):', pot ? 'sim' : 'nao');
+    var labels = ['Finalizar', 'Transferir', 'Ligar', 'Pesquisar', 'Adicionar Tag', 'Soltar Chat', 'Detalhes do Contato'];
     var achados = labels.map(function (la) {
-      var b = document.querySelector('button[aria-label="' + la + '"]');
+      var b = h ? h.querySelector('button[aria-label="' + la + '"]') : null;
       return la + '=' + (b ? (b.style.display === 'none' ? 'oculto' : 'visivel') : 'ausente');
     });
     console.log('[walytech] botoes de acao no DOM:', achados.join(' | '));
