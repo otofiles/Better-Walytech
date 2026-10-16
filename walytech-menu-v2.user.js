@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8.2
+// @version      2.8.3
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.2
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.2
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.3
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.3
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -279,9 +279,9 @@
   function ehPotencial() {
     var h = getHeader();
     if (!h) return false;
-    var sp = h.querySelectorAll('span');
-    for (var i = 0; i < sp.length; i++) {
-      var c = sp[i].className;
+    var els = h.querySelectorAll('*');
+    for (var i = 0; i < els.length; i++) {
+      var c = els[i].className;
       if (typeof c !== 'string') continue;
       if (c.indexOf('text-[10px]') !== -1 && c.indexOf('font-semibold') !== -1 && c.indexOf('bg-sky-500/15') !== -1) return true;
     }
@@ -2525,8 +2525,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8.2';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.2';
+  var SK_VERSION = '2.8.3';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.3';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
