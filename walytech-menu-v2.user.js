@@ -178,8 +178,8 @@
       var lapis = document.createElement('button');
       lapis.type = 'button';
       lapis.setAttribute('data-waly-cores-lapis', '1');
-      lapis.textContent = '\\u270e';
-      lapis.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-left:8px;border:0;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;cursor:pointer;font-size:14px';
+      lapis.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[16px] w-[16px]" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
+      lapis.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-left:8px;border:0;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;cursor:pointer';
       lapis.addEventListener('click', function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
