@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8.1
+// @version      2.8.2
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.1
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.1
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.2
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.2
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -16,7 +16,27 @@
   console.log('[walytech] script carregado');
 
   function getHeader() {
-    return document.querySelector('.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3');
+    var h = document.querySelector('.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3');
+    if (h) return h;
+    return document.querySelector('.flex.shrink-0.items-center.justify-between.gap-2.border-b.border-border.bg-card');
+  }
+
+  function botaoInvisivel(b) {
+    if (b.closest && b.closest('[aria-hidden="true"]')) return true;
+    var p = b.parentNode;
+    var n = 0;
+    while (p && p.nodeType === 1 && n < 6) {
+      if (p.classList && p.classList.contains('invisible')) return true;
+      p = p.parentNode;
+      n++;
+    }
+    return false;
+  }
+
+  function grupoAcoesHeader() {
+    var h = getHeader();
+    if (!h) return null;
+    return h.querySelector('.flex.shrink-0.items-center.gap-0\\.5');
   }
 
   function getDots() {
@@ -56,12 +76,26 @@
     }
   }
 
+  var ignorarGatilhoDots = false;
+
   function abrirTrigger(btn3) {
     btn3.focus();
-    disp(btn3, 'pointerdown', {
-      bubbles: true, cancelable: true, view: window, button: 0, buttons: 1,
-      pointerId: 1, pointerType: 'mouse', isPrimary: true
-    });
+    ignorarGatilhoDots = true;
+    try {
+      disp(btn3, 'pointerdown', {
+        bubbles: true, cancelable: true, view: window, button: 0, buttons: 1,
+        pointerId: 1, pointerType: 'mouse', isPrimary: true
+      });
+    } finally {
+      setTimeout(function () { ignorarGatilhoDots = false; }, 0);
+    }
+  }
+
+  function clicar3PontosNativo(btn3) {
+    if (!btn3) return;
+    ignorarGatilhoDots = true;
+    try { btn3.click(); } catch (e) {}
+    setTimeout(function () { ignorarGatilhoDots = false; }, 0);
   }
 
   function clicarItem(item) {
@@ -115,6 +149,15 @@
             if (!target && norm(itens[i].textContent) === n) target = itens[i];
           }
         });
+        if (!target) {
+          document.querySelectorAll('[role="menu"][data-state="open"]').forEach(function (m) {
+            var itens = m.querySelectorAll('[role="menuitem"]');
+            for (var i = 0; i < itens.length; i++) {
+              var t = norm(itens[i].textContent);
+              if (!target && t && t.indexOf(n) !== -1) target = itens[i];
+            }
+          });
+        }
 
         if (target) {
           clearInterval(timer);
@@ -128,7 +171,7 @@
           } else {
             console.log('[walytech] menu NUNCA abriu para', nome);
           }
-          if (estaAberto()) btn3.click();
+          if (estaAberto()) clicar3PontosNativo(btn3);
         }
       }, 120);
     }, 50);
@@ -137,10 +180,11 @@
   function limparHeaderAcoes() {
     var h = getHeader();
     if (!h) return;
-    var g = h.querySelector('.flex.shrink-0.items-center.gap-0\\.5');
+    var g = grupoAcoesHeader();
     if (!g) return;
     var menus = [];
     g.querySelectorAll('button').forEach(function (b) {
+      if (botaoInvisivel(b)) return;
       var ehNosso = b.hasAttribute('data-walytech') || b.hasAttribute('data-walytech-rgb') || b.hasAttribute('data-walytech-timer');
       if (ehNosso) { b.style.display = ''; b.removeAttribute('data-waly-btn'); return; }
       var la = norm(b.getAttribute('aria-label') || '');
@@ -169,101 +213,207 @@
     if (num) num.setAttribute('data-waly-num', '');
   }
 
+  function tipoDoBotao(b) {
+    if (!b) return '';
+    var la = norm((b.getAttribute('aria-label') || '') + ' ' + (b.textContent || ''));
+    var svg = b.querySelector('svg');
+    var inner = svg ? svg.innerHTML : '';
+    if (/pesquis|search|buscar/.test(la) || inner.indexOf('m21 21-4.3') !== -1 || inner.indexOf('m21 21-4.34') !== -1 || inner.indexOf('m21 21-4.35') !== -1) return 'pesquisar';
+    if (/tag|etiqueta/.test(la) || inner.indexOf('M13.172 2a2') !== -1) return 'tags';
+    if (/soltar|pop.?out/.test(la) || inner.indexOf('M21 9V6a2 2 0 0 0-2-2H4') !== -1) return 'soltar';
+    if (/detalhe|detail/.test(la) || inner.indexOf('M15 3v18') !== -1) return 'detalhes';
+    return '';
+  }
+
   function acharBotoesNativos() {
-    var h = getHeader();
-    if (!h) return {};
-    var g = h.querySelector('.flex.shrink-0.items-center.gap-0\\.5');
-    if (!g) return {};
     var res = { pesquisar: null, tags: null, soltar: null, detalhes: null };
-    var buttons = g.querySelectorAll('button');
-    for (var i = 0; i < buttons.length; i++) {
-      var b = buttons[i];
-      if (b.getAttribute('aria-haspopup') === 'menu') continue;
-      var svg = b.querySelector('svg');
-      var inner = svg ? svg.innerHTML : '';
-      var la = norm(b.getAttribute('aria-label') || '');
-      if (!res.pesquisar && inner.indexOf('m21 21-4.34-4.34') !== -1) res.pesquisar = b;
-      else if (!res.tags && (la.indexOf('tag') !== -1 || inner.indexOf('M13.172 2a2') !== -1)) res.tags = b;
-      else if (!res.soltar && inner.indexOf('M21 9V6a2 2 0 0 0-2-2H4') !== -1) res.soltar = b;
-      else if (!res.detalhes && inner.indexOf('M15 3v18') !== -1) res.detalhes = b;
+    var g = grupoAcoesHeader();
+    if (g) {
+      var buttons = g.querySelectorAll('button');
+      for (var i = 0; i < buttons.length; i++) {
+        var b = buttons[i];
+        if (botaoInvisivel(b)) continue;
+        if (b.getAttribute('aria-haspopup') === 'menu') continue;
+        var tipo = tipoDoBotao(b);
+        if (tipo && !res[tipo]) res[tipo] = b;
+      }
+    }
+    if (!res.pesquisar || !res.tags || !res.soltar || !res.detalhes) {
+      var itens = document.querySelectorAll('[role="menu"][data-state="open"] [role="menuitem"]');
+      for (var k = 0; k < itens.length; k++) {
+        var it = itens[k];
+        var tipo2 = tipoDoBotao(it);
+        if (tipo2 && !res[tipo2]) res[tipo2] = it;
+      }
     }
     return res;
   }
 
-  function acharMenuHeader() {
-    var menus = document.querySelectorAll('[role="menu"][data-state="open"]');
-    for (var i = 0; i < menus.length; i++) {
-      var m = menus[i];
-      var itens = m.querySelectorAll('[role="menuitem"]');
-      for (var j = 0; j < itens.length; j++) {
-        var t = norm(itens[j].textContent);
-        if (t === 'encaminhar mensagens' || t === 'marcar como nao lido' || t === 'remover retorno') return m;
-      }
-    }
-    return null;
-  }
-
   function executarNativo(tipo) {
     var btn3 = getDots();
-    try { if (btn3) btn3.click(); } catch (e) {}
+    abrirTrigger(btn3);
     setTimeout(function () {
       var n = acharBotoesNativos();
       var b = n[tipo];
       if (!b) return;
       try { b.click(); } catch (e) {}
-    }, 60);
+    }, 120);
   }
 
-  function injetarItensMenu() {
+  function clicarAcaoHeader(la) {
+    var alvo = norm(la);
+    var buttons = document.querySelectorAll('button');
+    for (var i = 0; i < buttons.length; i++) {
+      var b = buttons[i];
+      if (botaoInvisivel(b)) continue;
+      if (b.getAttribute('aria-haspopup') === 'menu') continue;
+      if (norm(b.getAttribute('aria-label') || '') === alvo) {
+        try { b.click(); return true; } catch (e) { return false; }
+      }
+    }
+    return false;
+  }
+
+  var painelDots = null;
+
+  function ehPotencial() {
+    var h = getHeader();
+    if (!h) return false;
+    var sp = h.querySelectorAll('span');
+    for (var i = 0; i < sp.length; i++) {
+      var c = sp[i].className;
+      if (typeof c !== 'string') continue;
+      if (c.indexOf('text-[10px]') !== -1 && c.indexOf('font-semibold') !== -1 && c.indexOf('bg-sky-500/15') !== -1) return true;
+    }
+    return false;
+  }
+
+  function atualizarItensDots() {
+    if (!painelDots) return;
+    var mostrar = ehPotencial();
+    var rem = painelDots.querySelector('[data-waly-dots-item="remover"]');
+    var sep = painelDots.querySelector('[data-waly-dots-sep="remover"]');
+    if (rem) rem.style.display = mostrar ? '' : 'none';
+    if (sep) sep.style.display = mostrar ? '' : 'none';
+  }
+
+  function svgDots(caminhos) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + caminhos + '</svg>';
+  }
+
+  function itensDots() {
+    return [
+      { chave: 'encaminhar', rot: 'Encaminhar Mensagens', nativo: 'Encaminhar Mensagens', icone: svgDots('<path d="m15 17 5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/>') },
+      { chave: 'naolidi', rot: 'Marcar como Não Lido', nativo: 'Marcar como Não Lido', icone: svgDots('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>') },
+      { sep: true },
+      { chave: 'pesquisar', rot: 'Pesquisar na conversa', la: 'Pesquisar', alt: 'Pesquisar', icone: svgDots('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>') },
+      { chave: 'tags', rot: 'Adicionar Tag', la: 'Adicionar Tag', alt: 'Adicionar Tag', icone: svgDots('<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>') },
+      { chave: 'soltar', rot: 'Soltar chat', la: 'Soltar Chat', alt: 'Soltar Chat', icone: svgDots('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>') },
+      { chave: 'detalhes', rot: 'Detalhes do contato', la: 'Detalhes do Contato', alt: 'Detalhes do Contato', icone: svgDots('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>') },
+      { chave: 'ligar', rot: 'Ligar', la: 'Ligar', alt: 'Ligar', icone: svgDots('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>') },
+      { sep: 'remover' },
+      { chave: 'remover', rot: 'Remover', nativo: 'Remover', perigo: true, somentePotencial: true, icone: svgDots('<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>') }
+    ];
+  }
+
+  function criarPainelDots() {
+    if (painelDots && document.body && document.body.contains(painelDots)) return;
+    painelDots = document.createElement('div');
+    painelDots.id = 'walytech-dots-panel';
+    var html = '<div class="waly-dots-topo"><span>Ações do chat</span><button type="button" class="waly-rgb-x" aria-label="Fechar">&#10005;</button></div>';
+    var itens = itensDots();
+    for (var i = 0; i < itens.length; i++) {
+      var it = itens[i];
+      if (it.sep) { html += '<div class="waly-dots-sep" data-waly-dots-sep="' + (it.sep === true ? '1' : it.sep) + '"></div>'; continue; }
+      html += '<button type="button" class="waly-dots-item' + (it.perigo ? ' waly-dots-perigo' : '') + '" data-waly-dots-item="' + it.chave + '">' + it.icone + '<span>' + it.rot + '</span></button>';
+    }
+    painelDots.innerHTML = html;
+    document.body.appendChild(painelDots);
+    painelDots.querySelector('.waly-rgb-x').addEventListener('click', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      fecharPainelDots();
+    });
+    var btns = painelDots.querySelectorAll('[data-waly-dots-item]');
+    for (var k = 0; k < btns.length; k++) {
+      btns[k].addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        acionarItemDots(this.getAttribute('data-waly-dots-item'));
+      });
+    }
+    atualizarItensDots();
+  }
+
+  function acionarItemDots(chave) {
+    var itens = itensDots();
+    var it = null;
+    for (var i = 0; i < itens.length; i++) if (itens[i].chave === chave) it = itens[i];
+    if (!it) return;
+    if (it.somentePotencial && !ehPotencial()) return;
+    fecharPainelDots();
+    if (it.nativo) { executar(it.nativo); return; }
+    var clicou = clicarAcaoHeader(it.la);
+    if (!clicou && it.alt) setTimeout(function () { executar(it.alt); }, 40);
+  }
+
+  function posicionarPainelDots(btn) {
+    var r = btn.getBoundingClientRect();
+    painelDots.style.top = (r.bottom + 8) + 'px';
+    painelDots.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+    painelDots.style.left = 'auto';
+  }
+
+  function abrirPainelDots(btn) {
+    if (!btn) return;
+    if (!painelDots) criarPainelDots();
+    atualizarItensDots();
+    if (painel && painel.classList.contains('waly-aberto')) fecharPainel();
+    if (painelTimer && painelTimer.classList.contains('waly-aberto')) fecharPainelTimer();
+    if (estaAberto()) clicar3PontosNativo(btn);
+    posicionarPainelDots(btn);
+    painelDots.classList.add('waly-aberto');
+  }
+
+  function fecharPainelDots() {
+    if (painelDots) painelDots.classList.remove('waly-aberto');
+  }
+
+  function alternarPainelDots(btn) {
+    if (painelDots && painelDots.classList.contains('waly-aberto')) { fecharPainelDots(); return; }
+    abrirPainelDots(btn);
+  }
+
+  function ligarGatilhoDots() {
     var btn3 = getDots();
     if (!btn3) return;
-    var menu = acharMenuHeader();
-    if (!menu) return;
-    if (menu.querySelector('[data-walytech-menuextra]')) return;
-    var nativos = acharBotoesNativos();
-    var acres = [
-      { t: 'pesquisar', r: 'Pesquisar na conversa', b: nativos.pesquisar },
-      { t: 'tags', r: 'Adicionar Tag', b: nativos.tags },
-      { t: 'soltar', r: 'Soltar chat', b: nativos.soltar },
-      { t: 'detalhes', r: 'Detalhes do contato', b: nativos.detalhes }
-    ];
-    var presente = 0;
-    for (var a = 0; a < acres.length; a++) { if (acres[a].b) presente++; }
-    if (!presente) return;
-    var modelo = menu.querySelector('[role="menuitem"]');
-    var cls = modelo ? modelo.className : '';
-    var sep = document.createElement('div');
-    sep.setAttribute('role', 'separator');
-    sep.className = 'my-1 h-px bg-border -mx-1';
-    sep.setAttribute('data-walytech-menuextra', 'sep');
-    menu.appendChild(sep);
-    for (var k = 0; k < acres.length; k++) {
-      var a2 = acres[k];
-      if (!a2.b) continue;
-      var item = document.createElement('div');
-      item.setAttribute('role', 'menuitem');
-      item.setAttribute('tabindex', '-1');
-      item.className = cls;
-      item.setAttribute('data-walytech-menuextra', a2.t);
-      item.style.cursor = 'pointer';
-      var svg = a2.b.querySelector('svg');
-      var svgHtml = svg ? svg.outerHTML : '';
-      svgHtml = svgHtml.replace(/class="[^"]*"/, 'class="mr-2 h-4 w-4"');
-      item.innerHTML = svgHtml + a2.r;
-      (function (tipo) {
-        item.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          executarNativo(tipo);
-        });
-      })(a2.t);
-      menu.appendChild(item);
-    }
+    if (btn3.getAttribute('data-walytech-dots-gatilho') === '1') return;
+    btn3.setAttribute('data-walytech-dots-gatilho', '1');
+    btn3.addEventListener('pointerdown', function (ev) {
+      if (ignorarGatilhoDots) return;
+      if (ev.button !== 0) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+    }, true);
+    btn3.addEventListener('click', function (ev) {
+      if (ignorarGatilhoDots) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+      alternarPainelDots(btn3);
+    }, true);
   }
+
+  function prepararMenuDots() {
+    criarPainelDots();
+    ligarGatilhoDots();
+  }
+
 
   function loopBotoes() {
     try { limparHeaderAcoes(); } catch (e) { console.log('[walytech] erro:', e.message); }
-    try { injetarItensMenu(); } catch (e) { console.log('[walytech] erro:', e.message); }
+    try { prepararMenuDots(); } catch (e) { console.log('[walytech] erro:', e.message); }
   }
 
   var MARCA = 'data-walytech-nav';
@@ -283,7 +433,9 @@
   ];
 
   function getBase() {
-    var s = document.querySelector('script[src*="/assets/index-"]');
+    var s = document.querySelector('script[src*="/assets/main-"]') ||
+      document.querySelector('script[src*="/assets/index-"]') ||
+      document.querySelector('script[src*="/assets/"]');
     if (s) {
       try {
         var u = new URL(s.getAttribute('src'), location.origin);
@@ -531,9 +683,9 @@
     'html.waly-bg,html.waly-bg body{background-color:transparent!important}' +
     'html.waly-bg [class*="bg-background"],html.waly-bg [class*="bg-muted/"]{background-color:transparent!important}' +
     'html.waly-chat [class~="text-primary"],html [id^="msg-"] [class~="text-primary"],html [class*="bg-wa-chat-bg"] [class~="text-primary"],html [class*="bg-wa-bubble"] [class~="text-primary"]{color:#FFFFFF!important;font-weight:700!important}' +
-    ':where(.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3 button[aria-label="Finalizar"]) svg{stroke:#dc2626!important;color:#dc2626!important}' +
-    ':where(.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3 button[aria-label="Finalizar"]:hover) svg{stroke:#b91c1c!important;color:#b91c1c!important}' +
-    ':where(.flex.h-16.shrink-0.items-center.justify-between.border-b.border-border.bg-card.px-3 button[aria-label="Finalizar"]:hover){background-color:color-mix(in srgb,#b91c1c 26%,transparent)!important}' +
+    ':where(div.flex.shrink-0.items-center.justify-between.border-b.border-border.bg-card button[aria-label="Finalizar"]) svg{stroke:#dc2626!important;color:#dc2626!important}' +
+    ':where(div.flex.shrink-0.items-center.justify-between.border-b.border-border.bg-card button[aria-label="Finalizar"]:hover) svg{stroke:#b91c1c!important;color:#b91c1c!important}' +
+    ':where(div.flex.shrink-0.items-center.justify-between.border-b.border-border.bg-card button[aria-label="Finalizar"]:hover){background-color:color-mix(in srgb,#b91c1c 26%,transparent)!important}' +
     'button[aria-label="Toggle theme"]{display:none!important}' +
     'button[data-walytech-nl]{background-color:#10B981!important;border-color:#10B981!important;color:#FFFFFF!important;box-shadow:0 0 0 1px rgba(16,185,129,.35),0 4px 14px -4px rgba(16,185,129,.7)}' +
     'button[data-walytech-nl]:hover{background-color:#059669!important;border-color:#059669!important;color:#FFFFFF!important}' +
@@ -628,6 +780,17 @@
     '#walytech-rgb-panel .waly-foto-prevw img{display:block;width:100%;max-height:150px;object-fit:contain;background:#000}' +
     '#walytech-rgb-panel .waly-foto-input{width:100%;padding:8px;margin-bottom:10px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;font-size:12px}' +
     '#walytech-rgb-panel .waly-foto-input::placeholder{color:rgba(255,255,255,.35)}' +
+    '#walytech-dots-panel{position:fixed;z-index:2147483600;display:none;min-width:234px;max-width:290px;padding:6px;border-radius:14px;background:#1b1b21;color:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px -16px rgba(0,0,0,.65);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px}' +
+    '#walytech-dots-panel.waly-aberto{display:block}' +
+    '#walytech-dots-panel .waly-dots-topo{display:flex;align-items:center;justify-content:space-between;font-weight:600;padding:6px 10px 8px}' +
+    '#walytech-dots-panel .waly-rgb-x{background:none;border:0;color:#fff;cursor:pointer;font-size:13px;opacity:.7;padding:2px 4px}' +
+    '#walytech-dots-panel .waly-rgb-x:hover{opacity:1}' +
+    '#walytech-dots-panel .waly-dots-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;background:none;color:#fff;border-radius:9px;cursor:pointer;font-size:13px;text-align:left;font-family:inherit;line-height:1.2}' +
+    '#walytech-dots-panel .waly-dots-item:hover{background:rgba(255,255,255,.1)}' +
+    '#walytech-dots-panel .waly-dots-item svg{width:16px;height:16px;flex:0 0 auto;opacity:.85}' +
+    '#walytech-dots-panel .waly-dots-item.waly-dots-perigo{color:#F87171}' +
+    '#walytech-dots-panel .waly-dots-item.waly-dots-perigo:hover{background:rgba(248,113,113,.14)}' +
+    '#walytech-dots-panel .waly-dots-sep{height:1px;margin:5px 8px;background:rgba(255,255,255,.1)}' +
     'img[data-walytech-foto-inj]{border-radius:inherit}';
   (document.head || document.documentElement).appendChild(estiloPainel);
 
@@ -944,7 +1107,26 @@
   var chatLista = [];
   var chatListaHora = 0;
   var chatBuscando = false;
+  var FOTO_QUEBRADAS_KEY = 'walytechFotosQuebradas';
+  var FOTO_QUEBRADAS_MS = 6 * 60 * 60 * 1000;
   var fotosQuebradas = {};
+  try {
+    var fqc = JSON.parse(localStorage.getItem(FOTO_QUEBRADAS_KEY) || '{}');
+    if (fqc && typeof fqc === 'object' && !Array.isArray(fqc)) fotosQuebradas = fqc;
+  } catch (e) {}
+  (function () {
+    var agora = Date.now();
+    for (var k in fotosQuebradas) {
+      if (!fotosQuebradas[k] || agora - fotosQuebradas[k] > FOTO_QUEBRADAS_MS) delete fotosQuebradas[k];
+    }
+  })();
+
+  function marcarFotoQuebrada(url) {
+    if (!url) return;
+    var mudou = !fotosQuebradas[url];
+    fotosQuebradas[url] = Date.now();
+    if (mudou) { try { localStorage.setItem(FOTO_QUEBRADAS_KEY, JSON.stringify(fotosQuebradas)); } catch (e) {} }
+  }
   var fotoMapForceUltimo = 0;
 
   function linkValido(u) {
@@ -1367,8 +1549,21 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   }
 
   function aplicarFotoImg(im, url) {
+    if (fotosQuebradas[url]) return;
     if (im.getAttribute('data-walytech-foto') === url && im.getAttribute('src') === url) return;
     if (!im.getAttribute('data-walytech-foto')) im.setAttribute('data-walytech-foto-orig', im.getAttribute('src') || '');
+    if (!im.getAttribute('data-walytech-erro')) {
+      im.setAttribute('data-walytech-erro', '1');
+      im.addEventListener('error', function () {
+        var u = im.getAttribute('data-walytech-foto');
+        if (u) marcarFotoQuebrada(u);
+        var o = im.getAttribute('data-walytech-foto-orig');
+        im.removeAttribute('data-walytech-foto');
+        im.removeAttribute('data-walytech-foto-orig');
+        if (o) im.setAttribute('src', o);
+        else im.removeAttribute('src');
+      });
+    }
     im.setAttribute('data-walytech-foto', url);
     im.setAttribute('src', url);
   }
@@ -1396,7 +1591,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     im.setAttribute('decoding', 'async');
     im.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:1;pointer-events:none';
     im.onerror = function () {
-      fotosQuebradas[url] = 1;
+      marcarFotoQuebrada(url);
       if (im.parentNode) im.parentNode.removeChild(im);
     };
     im.src = url;
@@ -1440,7 +1635,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
         var alt = (im.getAttribute('alt') || '').trim();
         if (!alt || ehAvatarGrande(im)) continue;
         var alvo = m[norm(alt)];
-        if (alvo) aplicarFotoImg(im, alvo);
+        if (alvo && !fotosQuebradas[alvo]) aplicarFotoImg(im, alvo);
       }
       var caixas = document.querySelectorAll('span.rounded-full.overflow-hidden');
       for (var j = 0; j < caixas.length; j++) {
@@ -2330,8 +2525,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8.1';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.1';
+  var SK_VERSION = '2.8.2';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.2';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
@@ -2877,12 +3072,17 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       var c3 = alvo.closest;
       if (!c3 || !c3.call(alvo, '[data-walytech-timer]')) fecharPainelTimer();
     }
+    if (painelDots && painelDots.classList.contains('waly-aberto') && !painelDots.contains(alvo)) {
+      var c4 = alvo.closest;
+      if (!c4 || !c4.call(alvo, '[data-walytech-dots-gatilho]')) fecharPainelDots();
+    }
   }, true);
 
   document.addEventListener('keydown', function (ev) {
     if (ev.key === 'Escape') {
       fecharPainel();
       fecharPainelTimer();
+      fecharPainelDots();
     }
   });
 
@@ -2958,6 +3158,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     console.log('[walytech] chave de escrita:', fotoChave() ? 'definida' : 'vazia (so leitura)');
     console.log('[walytech] sincronizacao desligada nesta maquina:', fotoServidorDesligado());
     console.log('[walytech] fotos removidas (bloqueadas):', JSON.stringify(fotoBloqueados()));
+    console.log('[walytech] links de foto que nao carregaram:', JSON.stringify(fotosQuebradas));
     console.log('[walytech] registro lido de:', fotoServidor() ? srvUrl() : FOTO_RAW);
     var m = mapaFotos();
     console.log('[walytech] mapa em uso (' + Object.keys(m).length + '):', JSON.stringify(m).slice(0, 700));
@@ -2978,11 +3179,12 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     console.log('[walytech] header:', h ? 'sim' : 'nao');
     console.log('[walytech] 3 pontinhos no header:', btn3 ? 'sim' : 'nao');
     if (h) {
-      var g = h.querySelector('.flex.shrink-0.items-center.gap-0\\.5');
+      var g = grupoAcoesHeader();
       var botoes = g ? g.querySelectorAll('button') : [];
       var lista = [];
       botoes.forEach(function (b) {
-        lista.push((b.style.display === 'none' ? '[oculto] ' : '') + (b.getAttribute('aria-label') || '(sem rotulo)'));
+        var marca = botaoInvisivel(b) ? '[medicao] ' : (b.style.display === 'none' ? '[oculto] ' : '');
+        lista.push(marca + (b.getAttribute('aria-label') || '(sem rotulo)'));
       });
       console.log('[walytech] botoes do grupo de acoes:', lista.length ? lista.join(' | ') : '(nenhum)');
       var nat = acharBotoesNativos();
@@ -3041,7 +3243,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       return;
     }
     console.log('[walytech] abrindo menu do header para inspecao...');
-    btn3.click();
+    abrirTrigger(btn3);
     var tentativas = 0;
     var timer = setInterval(function () {
       tentativas++;
@@ -3049,10 +3251,26 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       if (menus.length > 0 || tentativas >= 30) {
         clearInterval(timer);
         listarMenus();
-        btn3.click();
+        clicar3PontosNativo(btn3);
         console.log('[walytech] menu inspecionado e fechado.');
       }
     }, 100);
+  };
+
+  window.__walytDotsDebug = function () {
+    var btn3 = getDots();
+    console.log('[walytech] 3 pontinhos:', btn3 ? 'sim' : 'nao');
+    console.log('[walytech] gatilho ligado no 3 pontinhos:', btn3 && btn3.getAttribute('data-walytech-dots-gatilho') === '1' ? 'sim' : 'nao');
+    console.log('[walytech] painel criado:', painelDots ? (painelDots.classList.contains('waly-aberto') ? 'aberto' : 'fechado') : 'nao');
+    console.log('[walytech] painel dentro do body:', painelDots && document.body.contains(painelDots) ? 'sim' : 'nao');
+    var pot = ehPotencial();
+    console.log('[walytech] atendimento potencial (badge no header):', pot ? 'sim' : 'nao', '=> item "Remover":', pot ? 'aparece' : 'oculto');
+    var labels = ['Pesquisar', 'Adicionar Tag', 'Soltar Chat', 'Detalhes do Contato', 'Ligar'];
+    var achados = labels.map(function (la) {
+      var b = document.querySelector('button[aria-label="' + la + '"]');
+      return la + '=' + (b ? (b.style.display === 'none' ? 'oculto' : 'visivel') : 'ausente');
+    });
+    console.log('[walytech] botoes de acao no DOM:', achados.join(' | '));
   };
 
   window.__walytNavDebug = function () {
