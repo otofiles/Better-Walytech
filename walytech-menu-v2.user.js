@@ -141,16 +141,30 @@
     var els = document.querySelectorAll('*');
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
-      if (el.children.length > 0) continue;
       var txt = (el.textContent || '').trim();
-      if (txt !== 'Personalizar Chat') continue;
+      if (txt.indexOf('Personalizar Chat') === -1) continue;
+      if (txt.length > 40) continue;
       var p = el;
-      for (var n = 0; n < 10; n++) {
-        if (!p) break;
-        if (p.getAttribute && (p.getAttribute('role') === 'dialog' || p.getAttribute('data-state') === 'open' || p.getAttribute('data-radix-content-wrapper') !== null)) return p;
+      for (var n = 0; n < 15; n++) {
+        if (!p || p === document.body || p === document.documentElement) break;
+        if (p.getAttribute && (p.getAttribute('role') === 'dialog' || p.getAttribute('data-state') === 'open')) return p;
+        if (p.classList && p.classList.contains && (p.classList.contains('fixed') || p.classList.contains('absolute') || p.classList.contains('inset-0'))) {
+          // Verificar se parece um dialog (grande, centralizado)
+          var rect = p.getBoundingClientRect && p.getBoundingClientRect();
+          if (rect && rect.width > 400 && rect.height > 200) return p;
+        }
         p = p.parentNode;
       }
-      return el.parentElement;
+      // Fallback: procurar por um container que contém os botoes de aba
+      p = el.parentElement;
+      for (var n = 0; n < 10; n++) {
+        if (!p || p === document.body) break;
+        var btns = p.querySelectorAll('button');
+        for (var b = 0; b < btns.length; b++) {
+          if ((btns[b].textContent || '').trim() === 'Ações do Chat') return p;
+        }
+        p = p.parentNode;
+      }
     }
     return null;
   }
@@ -158,6 +172,22 @@
   function injetarAbaCores() {
     var dialog = detectarPersonalizarChat();
     if (!dialog) { console.log('[walytech] Personalizar Chat: dialogo NAO encontrado'); return; }
+    if (!dialog.querySelector('[data-waly-cores-lapis]')) {
+      var header = dialog.querySelector('div.min-w-0, div.flex.items-center.justify-between');
+      if (!header) header = dialog;
+      var lapis = document.createElement('button');
+      lapis.type = 'button';
+      lapis.setAttribute('data-waly-cores-lapis', '1');
+      lapis.textContent = '\\u270e';
+      lapis.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-left:8px;border:0;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;cursor:pointer;font-size:14px';
+      lapis.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var coresSection = dialog.querySelector('[data-waly-cores-content]');
+        if (coresSection) coresSection.style.display = coresSection.style.display === 'block' ? 'none' : 'block';
+      });
+      header.appendChild(lapis);
+    }
     if (dialog.querySelector('[data-waly-cores-tab]')) return;
     console.log('[walytech] Personalizar Chat: dialogo encontrado, injetando aba Cores...');
     var allBtns = dialog.querySelectorAll('button');
