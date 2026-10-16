@@ -169,7 +169,7 @@
     if (existing) return existing;
     var content = document.createElement('div');
     content.setAttribute('data-waly-cores-content', '1');
-    content.style.cssText = 'padding:16px;max-height:60vh;overflow-y:auto;display:none';
+    content.style.cssText = 'position:fixed;top:10vh;right:12px;width:320px;max-width:90vw;padding:16px;max-height:78vh;overflow-y:auto;display:none;z-index:2147483700;background:#1b1b21;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:14px;box-shadow:0 24px 60px -16px rgba(0,0,0,.65);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px';
     var html = '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;margin:0 0 12px">Cores dos botões do chat</div>';
     for (var i = 0; i < BOTOES_CORES.length; i++) {
       var b = BOTOES_CORES[i];
