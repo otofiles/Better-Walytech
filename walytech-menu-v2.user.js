@@ -42,279 +42,8 @@
       .toLowerCase();
   }
 
-  function ehPotencial() {
-    var h = getHeader();
-    if (!h) return false;
-    var els = h.querySelectorAll('*');
-    for (var i = 0; i < els.length; i++) {
-      var c = els[i].className;
-      if (typeof c !== 'string') continue;
-      if (c.indexOf('text-[10px]') !== -1 && c.indexOf('font-semibold') !== -1 && c.indexOf('bg-sky-500/15') !== -1) return true;
-    }
-    return false;
-  }
-
-  function chaveDoBotao(b) {
-    if (!b) return '';
-    var la = norm(b.getAttribute('aria-label') || '');
-    var svg = b.querySelector('svg');
-    var inner = svg ? svg.innerHTML : '';
-    if (/finali[sz]|finish|terminar|terminar atendimento/.test(la)) return 'fin';
-    if (/transfer/.test(la)) return 'trans';
-    if (/fechar conversa|close \w*(conversation|chat)|encerrar|cerrar/.test(la)) return 'fech';
-    if (/ligar|call/.test(la) || inner.indexOf('M22 16.92v3a2 2 0 0 1-2.18 2') !== -1) return 'ligar';
-    if (/pesquis|search|buscar/.test(la) || inner.indexOf('m21 21-4.3') !== -1 || inner.indexOf('m21 21-4.34') !== -1 || inner.indexOf('m21 21-4.35') !== -1) return 'pesquisar';
-    if (/tag|etiqueta/.test(la) || inner.indexOf('M13.172 2a2') !== -1) return 'tag';
-    if (/soltar|pop.?out/.test(la) || inner.indexOf('M21 9V6a2 2 0 0 0-2-2H4') !== -1) return 'soltar';
-    if (/detalhe|detail/.test(la) || inner.indexOf('M15 3v18') !== -1) return 'detalhes';
-    if (/encaminhar|forward/.test(la) || inner.indexOf('m15 17 5-5-5-5') !== -1) return 'encaminhar';
-    if (/nao.?lido|mark.?unread|unread/.test(la) || inner.indexOf('m22 7-8.97 5.7') !== -1) return 'naoLido';
-    if (/remover|remove/.test(la) || inner.indexOf('M3 6h18') !== -1) return ehPotencial() ? 'removerPotencial' : 'removerRetorno';
-    if (/webchat/.test(la) || inner.indexOf('M7.9 20A9 9 0 1 0 4 16.1L2 22Z') !== -1) return 'webchat';
-    return '';
-  }
-
-  function marcarBotoesHeader() {
-    var h = getHeader();
-    if (!h) return;
-    var btns = h.querySelectorAll('button');
-    for (var i = 0; i < btns.length; i++) {
-      var b = btns[i];
-      if (botaoInvisivel(b)) continue;
-      var chave = chaveDoBotao(b);
-      if (chave) b.setAttribute('data-waly-btn', chave);
-      else b.removeAttribute('data-waly-btn');
-    }
-    var num = h.querySelector('span.max-w-xs.shrink-0.truncate');
-    if (num) num.setAttribute('data-waly-num', '');
-  }
-
-  function marcarMenus() {
-    var menus = document.querySelectorAll('[role="menu"][data-state="open"] [role="menuitem"]');
-    for (var i = 0; i < menus.length; i++) {
-      var m = menus[i];
-      var chave = chaveDoBotao(m);
-      if (chave) m.setAttribute('data-waly-btn', chave);
-    }
-  }
-
   function loopBotoes() {
-    try { marcarBotoesHeader(); } catch (e) { console.log('[walytech] erro:', e.message); }
-    try { marcarMenus(); } catch (e) { console.log('[walytech] erro:', e.message); }
   }
-
-  var CORES_BOTOES_KEY = 'walytechCoresBotoes';
-  var BOTOES_CORES = [
-    { k: 'fin', rot: 'Finalizar', pad: '#dc2626' },
-    { k: 'trans', rot: 'Transferir', pad: '#94a3b8' },
-    { k: 'fech', rot: 'Fechar conversa', pad: '#94a3b8' },
-    { k: 'ligar', rot: 'Ligar', pad: '#94a3b8' },
-    { k: 'pesquisar', rot: 'Pesquisar', pad: '#94a3b8' },
-    { k: 'tag', rot: 'Adicionar Tag', pad: '#94a3b8' },
-    { k: 'soltar', rot: 'Soltar Chat', pad: '#94a3b8' },
-    { k: 'detalhes', rot: 'Detalhes do Contato', pad: '#94a3b8' },
-    { k: 'encaminhar', rot: 'Encaminhar Mensagens', pad: '#94a3b8' },
-    { k: 'naoLido', rot: 'Marcar como Não Lido', pad: '#94a3b8' },
-    { k: 'removerRetorno', rot: 'Remover (retorno)', pad: '#94a3b8' },
-    { k: 'removerPotencial', rot: 'Remover (potencial)', pad: '#94a3b8' },
-    { k: 'webchat', rot: 'Envio pelo Webchat', pad: '#94a3b8' }
-  ];
-
-  function coresBotoesSalvas() {
-    try {
-      var o = JSON.parse(localStorage.getItem(CORES_BOTOES_KEY) || '{}');
-      return o && typeof o === 'object' ? o : {};
-    } catch (e) { return {}; }
-  }
-
-  function salvarCorBotao(chave, cor) {
-    try {
-      var o = coresBotoesSalvas();
-      if (cor) o[chave] = cor;
-      else delete o[chave];
-      localStorage.setItem(CORES_BOTOES_KEY, JSON.stringify(o));
-    } catch (e) {}
-    aplicarCor(corSalva(), false);
-  }
-
-  function detectarPersonalizarChat() {
-    var els = document.querySelectorAll('*');
-    for (var i = 0; i < els.length; i++) {
-      var el = els[i];
-      if (el.children.length !== 0) continue;
-      var txt = (el.textContent || '').trim();
-      if (txt !== 'Personalizar Chat') continue;
-      var p = el.parentNode;
-      for (var n = 0; n < 15; n++) {
-        if (!p || p === document.body || p === document.documentElement) break;
-        var btns = p.querySelectorAll('button');
-        var hasRestore = false;
-        var cnt = 0;
-        for (var b = 0; b < btns.length; b++) {
-          var t = (btns[b].textContent || '').trim();
-          if (t === 'Restaurar padrão') hasRestore = true;
-          if (t === 'Lista de Atendimentos' || t === 'Detalhes do Contato' || t === 'Ações do Chat') cnt++;
-        }
-        var rect = p.getBoundingClientRect && p.getBoundingClientRect();
-        var big = rect && rect.width > 400 && rect.height > 200;
-        if (hasRestore && cnt >= 2 && big) return p;
-        p = p.parentNode;
-      }
-    }
-    return null;
-  }
-
-  function criarSecaoCores(dialog) {
-    var existing = document.querySelector('[data-waly-cores-content]');
-    if (existing) return existing;
-    var content = document.createElement('div');
-    content.setAttribute('data-waly-cores-content', '1');
-    content.style.cssText = 'position:fixed;top:10vh;right:12px;width:320px;max-width:90vw;padding:16px;max-height:78vh;overflow-y:auto;display:none;z-index:2147483700;background:#1b1b21;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:14px;box-shadow:0 24px 60px -16px rgba(0,0,0,.65);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px';
-    var html = '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;margin:0 0 12px">Cores dos botões do chat</div>';
-    for (var i = 0; i < BOTOES_CORES.length; i++) {
-      var b = BOTOES_CORES[i];
-      var saved = coresBotoesSalvas();
-      var val = saved['--waly-btn-' + b.k] || b.pad;
-      html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,.07)">' +
-        '<span style="font-size:12px;opacity:.9">' + b.rot + '</span>' +
-        '<input type="color" data-waly-cor-btn="' + b.k + '" value="' + val + '" style="width:34px;height:24px;border:0;background:none;cursor:pointer;padding:0">' +
-        '</div>';
-    }
-    html += '<button type="button" data-waly-cores-reset style="width:100%;margin-top:12px;padding:8px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:12px">Restaurar padrões</button>';
-    content.innerHTML = html;
-    document.body.appendChild(content);
-    var inputs = content.querySelectorAll('[data-waly-cor-btn]');
-    for (var i = 0; i < inputs.length; i++) {
-      inputs[i].addEventListener('input', function () {
-        salvarCorBotao(this.getAttribute('data-waly-cor-btn'), this.value);
-      });
-    }
-    var resetBtn = content.querySelector('[data-waly-cores-reset]');
-    if (resetBtn) resetBtn.addEventListener('click', function () {
-      try { localStorage.removeItem(CORES_BOTOES_KEY); } catch (e) {}
-      for (var i = 0; i < inputs.length; i++) {
-        var k = inputs[i].getAttribute('data-waly-cor-btn');
-        inputs[i].value = BOTOES_CORES[i].pad;
-      }
-      aplicarCor(corSalva(), false);
-    });
-    return content;
-  }
-
-  function injetarAbaCores() {
-    if (document.querySelector('[data-waly-cores-tab]')) return;
-    var dialog = detectarPersonalizarChat();
-    if (!dialog) { console.log('[walytech] Personalizar Chat: dialogo NAO encontrado'); return; }
-    if (!dialog.querySelector('[data-waly-cores-lapis]')) {
-      var title = (function (dd) {
-        var els = dd.querySelectorAll('*');
-        for (var k = 0; k < els.length; k++) {
-          if (els[k].children.length === 0 && (els[k].textContent || '').trim() === 'Personalizar Chat') return els[k];
-        }
-        return null;
-      })(dialog);
-      var closeBtn = null;
-      var allBtns = dialog.querySelectorAll('button');
-      for (var b = 0; b < allBtns.length; b++) {
-        if ((allBtns[b].getAttribute('aria-label') || '').toLowerCase().indexOf('fechar') !== -1) { closeBtn = allBtns[b]; break; }
-      }
-      // fallback pelo X
-      if (!closeBtn) {
-        for (var b = 0; b < allBtns.length; b++) {
-          if ((allBtns[b].textContent || '').trim() === '\u00d7' || (allBtns[b].innerHTML || '').indexOf('&#10005;') !== -1) { closeBtn = allBtns[b]; break; }
-        }
-      }
-      var container = closeBtn && closeBtn.parentNode ? closeBtn.parentNode : (dialog.querySelector('div.flex.items-center.justify-between') || dialog);
-      var lapis = document.createElement('button');
-      lapis.type = 'button';
-      lapis.setAttribute('data-waly-cores-lapis', '1');
-      lapis.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[16px] w-[16px]" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
-      lapis.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin-right:4px;border:0;background:none;color:#fff;cursor:pointer;padding:0;opacity:.7;';
-      lapis.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        var coresSection = document.querySelector('[data-waly-cores-content]');
-        if (!coresSection) coresSection = criarSecaoCores(dialog);
-        if (coresSection) coresSection.style.display = coresSection.style.display === 'block' ? 'none' : 'block';
-      });
-      if (closeBtn && closeBtn.parentNode) {
-        closeBtn.parentNode.insertBefore(lapis, closeBtn);
-      } else {
-        container.appendChild(lapis);
-      }
-      criarSecaoCores(dialog);
-    }
-    if (dialog.querySelector('[data-waly-cores-tab]')) return;
-    console.log('[walytech] Personalizar Chat: dialogo encontrado, injetando aba Cores...');
-    var allBtns = dialog.querySelectorAll('button');
-    var tabBar = null;
-    for (var i = 0; i < allBtns.length; i++) {
-      var t = allBtns[i];
-      var txt = (t.textContent || '').trim();
-      if (txt === 'Ações do Chat' || txt === 'Lista de Atendimentos' || txt === 'Detalhes do Contato') {
-        var parent = t.parentNode;
-        // Only treat as the modal tab bar if the same parent also has at least one other of the known tab labels
-        var siblings = parent ? parent.querySelectorAll('button') : null;
-        var foundOther = false;
-        if (siblings) {
-          for (var k = 0; k < siblings.length; k++) {
-            if (siblings[k] === t) continue;
-            var st = (siblings[k].textContent || '').trim();
-            if (st === 'Ações do Chat' || st === 'Lista de Atendimentos' || st === 'Detalhes do Contato') { foundOther = true; break; }
-          }
-        }
-        if (foundOther) { tabBar = parent; break; }
-      }
-    }
-    if (!tabBar) { console.log('[walytech] Personalizar Chat: barra de abas NAO encontrada'); return; }
-    var abaCores = document.createElement('button');
-    abaCores.type = 'button';
-    abaCores.setAttribute('data-waly-cores-tab', '1');
-    abaCores.textContent = 'Cores';
-    abaCores.style.cssText = 'flex:1;padding:6px 2px 8px;text-align:center;background:none;border:0;border-bottom:2px solid rgba(255,255,255,.08);color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;line-height:1.2';
-    abaCores.addEventListener('click', function () {
-      var coresSection = document.querySelector('[data-waly-cores-content]');
-      if (coresSection) coresSection.style.display = 'block';
-      var allTabs = tabBar.querySelectorAll('button');
-      for (var i = 0; i < allTabs.length; i++) allTabs[i].style.borderBottomColor = 'rgba(255,255,255,.08)';
-      abaCores.style.borderBottomColor = '#fff';
-    });
-    tabBar.appendChild(abaCores);
-    var content = criarSecaoCores(dialog);
-  }
-
-  function loopPersonalizarChat() {
-    try { injetarAbaCores(); } catch (e) {}
-    try {
-      var dialog = detectarPersonalizarChat();
-      if (!dialog) {
-        var coresSection = document.querySelector('[data-waly-cores-content]');
-        if (coresSection) coresSection.style.display = 'none';
-      }
-    } catch (e) {}
-  }
-
-  window.__walytPersonalizarChatDebug = function () {
-    var dialog = detectarPersonalizarChat();
-    console.log('[walytech] Personalizar Chat dialogo detectado:', dialog ? 'SIM' : 'NAO');
-    if (dialog) {
-      console.log('[walytech] classes do dialogo:', dialog.className);
-      var tabs = [];
-      dialog.querySelectorAll('button').forEach(function (b) { tabs.push((b.textContent || '').trim()); });
-      console.log('[walytech] botoes no dialogo:', tabs.join(' | '));
-      console.log('[walytech] aba Cores ja injetada:', !!dialog.querySelector('[data-waly-cores-tab]'));
-    } else {
-      // Listar elementos com texto Personalizar Chat
-      var found = [];
-      document.querySelectorAll('*').forEach(function (el) {
-        if (el.children.length === 0 && (el.textContent || '').trim() === 'Personalizar Chat') {
-          found.push(el.tagName + ' #' + el.id + ' .' + el.className);
-        }
-      });
-      console.log('[walytech] elementos com texto Personalizar Chat encontrados:', found.length);
-      found.slice(0, 5).forEach(function (f) { console.log('  -', f); });
-    }
-  };
 
   var MARCA = 'data-walytech-nav';
   var MARCA_GRUPO = 'data-walytech-navwrap';
@@ -1774,9 +1503,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     { nome: 'Texto da página', var: '--foreground' },
     { nome: 'Fundo dos cards', var: '--card' },
     { nome: 'Cor de borda', var: '--border' },
-    { nome: 'Erro / destrutivo', var: '--destructive' },
-    { grupo: 'Atendimento', desc: 'Número do contato que aparece no topo da conversa.', nome: 'Número do contato', var: '--waly-num', pad: '#94a3b8' },
-    { grupo: 'Presença', desc: 'Dot de status ao lado da sua foto no topo. Vermelho quando offline.', nome: 'Dot de offline', var: '--waly-off', pad: '#B22123' }
+    { nome: 'Erro / destrutivo', var: '--destructive' }
   ];
   var abaAtiva = 'cor';
 
@@ -1814,33 +1541,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   }
 
   function avancExtraCss() {
-    var o = avancSalvo();
-    var r = [];
-    var bt = [
-      { k: 'fin', sel: '[data-waly-btn="fin"]', pad: '#dc2626' },
-      { k: 'trans', sel: '[data-waly-btn="trans"]', pad: '#94a3b8' },
-      { k: 'fech', sel: '[data-waly-btn="fech"]', pad: '#94a3b8' },
-      { k: 'ligar', sel: '[data-waly-btn="ligar"]', pad: '#94a3b8' },
-      { k: 'pesquisar', sel: '[data-waly-btn="pesquisar"]', pad: '#94a3b8' },
-      { k: 'tag', sel: '[data-waly-btn="tag"]', pad: '#94a3b8' },
-      { k: 'soltar', sel: '[data-waly-btn="soltar"]', pad: '#94a3b8' },
-      { k: 'detalhes', sel: '[data-waly-btn="detalhes"]', pad: '#94a3b8' },
-      { k: 'encaminhar', sel: '[data-waly-btn="encaminhar"]', pad: '#94a3b8' },
-      { k: 'naoLido', sel: '[data-waly-btn="naoLido"]', pad: '#94a3b8' },
-      { k: 'removerRetorno', sel: '[data-waly-btn="removerRetorno"]', pad: '#94a3b8' },
-      { k: 'removerPotencial', sel: '[data-waly-btn="removerPotencial"]', pad: '#94a3b8' },
-      { k: 'webchat', sel: '[data-waly-btn="webchat"]', pad: '#94a3b8' }
-    ];
-    for (var i = 0; i < bt.length; i++) {
-      var c = o['--waly-btn-' + bt[i].k];
-      if (c) {
-        r.push(bt[i].sel + ' svg{stroke:' + c + '!important;color:' + c + '!important}');
-        r.push(bt[i].sel + ':hover{background-color:color-mix(in srgb,' + c + ' 26%,transparent)!important}');
-      }
-    }
-    if (o['--waly-num']) r.push('html [data-waly-num]{color:' + o['--waly-num'] + '!important}');
-    r.push('[class~="bg-zinc-400"]{background-color:' + (o['--waly-off'] || '#B22123') + '!important}');
-    return r.join('');
+    return '';
   }
 
   function avancReassert() {
@@ -2949,8 +2650,12 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
         var b = btns[i];
         if (botaoInvisivel(b)) continue;
         if (b.getAttribute('aria-haspopup') === 'menu') continue;
-        var chave = chaveDoBotao(b);
-        if (chave === item.alvo) { try { b.click(); } catch (e) {} return; }
+        var la = norm(b.getAttribute('aria-label') || '');
+        var match = (item.alvo === 'pesquisar' && /pesquis|search|buscar/.test(la)) ||
+                    (item.alvo === 'tags' && /tag|etiqueta/.test(la)) ||
+                    (item.alvo === 'soltar' && /soltar/.test(la)) ||
+                    (item.alvo === 'detalhes' && /detalhe/.test(la));
+        if (match) { try { b.click(); } catch (e) {} return; }
       }
       return;
     }
@@ -3030,8 +2735,6 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   function tick() {
     avancReassert();
     atualizarHub();
-    loopBotoes();
-    loopPersonalizarChat();
     loopLink();
     loopNaoLidas();
     loopStatusRodape();
@@ -3182,17 +2885,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }, 100);
   };
 
-  window.__walytDotsDebug = function () {
-    var h = getHeader();
-    console.log('[walytech] header:', h ? 'sim' : 'nao');
-    var pot = ehPotencial();
-    console.log('[walytech] atendimento potencial (badge no header):', pot ? 'sim' : 'nao');
-    var labels = ['Finalizar', 'Transferir', 'Ligar', 'Pesquisar', 'Adicionar Tag', 'Soltar Chat', 'Detalhes do Contato'];
-    var achados = labels.map(function (la) {
-      var b = h ? h.querySelector('button[aria-label="' + la + '"]') : null;
-      return la + '=' + (b ? (b.style.display === 'none' ? 'oculto' : 'visivel') : 'ausente');
-    });
-    console.log('[walytech] botoes de acao no DOM:', achados.join(' | '));
+  window.__walytDebug = function () {
+    console.log('[walytech] debug helper disponivel.');
   };
 
   window.__walytNavDebug = function () {
