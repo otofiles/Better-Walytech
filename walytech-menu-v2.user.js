@@ -141,28 +141,23 @@
     var els = document.querySelectorAll('*');
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
+      if (el.children.length !== 0) continue;
       var txt = (el.textContent || '').trim();
-      if (txt.indexOf('Personalizar Chat') === -1) continue;
-      if (txt.length > 40) continue;
-      var p = el;
+      if (txt !== 'Personalizar Chat') continue;
+      var p = el.parentNode;
       for (var n = 0; n < 15; n++) {
         if (!p || p === document.body || p === document.documentElement) break;
-        if (p.getAttribute && (p.getAttribute('role') === 'dialog' || p.getAttribute('data-state') === 'open')) return p;
-        if (p.classList && p.classList.contains && (p.classList.contains('fixed') || p.classList.contains('absolute') || p.classList.contains('inset-0'))) {
-          // Verificar se parece um dialog (grande, centralizado)
-          var rect = p.getBoundingClientRect && p.getBoundingClientRect();
-          if (rect && rect.width > 400 && rect.height > 200) return p;
-        }
-        p = p.parentNode;
-      }
-      // Fallback: procurar por um container que contém os botoes de aba
-      p = el.parentElement;
-      for (var n = 0; n < 10; n++) {
-        if (!p || p === document.body) break;
         var btns = p.querySelectorAll('button');
+        var hasRestore = false;
+        var cnt = 0;
         for (var b = 0; b < btns.length; b++) {
-          if ((btns[b].textContent || '').trim() === 'Ações do Chat') return p;
+          var t = (btns[b].textContent || '').trim();
+          if (t === 'Restaurar padrão') hasRestore = true;
+          if (t === 'Lista de Atendimentos' || t === 'Detalhes do Contato' || t === 'Ações do Chat') cnt++;
         }
+        var rect = p.getBoundingClientRect && p.getBoundingClientRect();
+        var big = rect && rect.width > 400 && rect.height > 200;
+        if (hasRestore && cnt >= 2 && big) return p;
         p = p.parentNode;
       }
     }
@@ -170,11 +165,18 @@
   }
 
   function injetarAbaCores() {
+    if (document.querySelector('[data-waly-cores-tab]')) return;
     var dialog = detectarPersonalizarChat();
     if (!dialog) { console.log('[walytech] Personalizar Chat: dialogo NAO encontrado'); return; }
     if (!dialog.querySelector('[data-waly-cores-lapis]')) {
-      var header = dialog.querySelector('div.min-w-0, div.flex.items-center.justify-between');
-      if (!header) header = dialog;
+      var title = (function (dd) {
+        var els = dd.querySelectorAll('*');
+        for (var k = 0; k < els.length; k++) {
+          if (els[k].children.length === 0 && (els[k].textContent || '').trim() === 'Personalizar Chat') return els[k];
+        }
+        return null;
+      })(dialog);
+      var header = title ? title.parentNode : (dialog.querySelector('div.min-w-0') || dialog);
       var lapis = document.createElement('button');
       lapis.type = 'button';
       lapis.setAttribute('data-waly-cores-lapis', '1');
@@ -196,11 +198,21 @@
       var t = allBtns[i];
       var txt = (t.textContent || '').trim();
       if (txt === 'Ações do Chat' || txt === 'Lista de Atendimentos' || txt === 'Detalhes do Contato') {
-        tabBar = t.parentNode;
-        break;
+        var parent = t.parentNode;
+        // Only treat as the modal tab bar if the same parent also has at least one other of the known tab labels
+        var siblings = parent ? parent.querySelectorAll('button') : null;
+        var foundOther = false;
+        if (siblings) {
+          for (var k = 0; k < siblings.length; k++) {
+            if (siblings[k] === t) continue;
+            var st = (siblings[k].textContent || '').trim();
+            if (st === 'Ações do Chat' || st === 'Lista de Atendimentos' || st === 'Detalhes do Contato') { foundOther = true; break; }
+          }
+        }
+        if (foundOther) { tabBar = parent; break; }
       }
     }
-    if (!tabBar) return;
+    if (!tabBar) { console.log('[walytech] Personalizar Chat: barra de abas NAO encontrada'); return; }
     var abaCores = document.createElement('button');
     abaCores.type = 'button';
     abaCores.setAttribute('data-waly-cores-tab', '1');
