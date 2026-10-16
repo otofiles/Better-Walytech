@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8.4
+// @version      2.8.5
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.4
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.4
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.5
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.5
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -138,25 +138,34 @@
   }
 
   function detectarPersonalizarChat() {
-    var titulos = document.querySelectorAll('div, span, h1, h2, h3, h4, h5, h6');
-    for (var i = 0; i < titulos.length; i++) {
-      if (titulos[i].textContent === 'Personalizar Chat' && titulos[i].children.length === 0) {
-        var dialog = titulos[i].closest('[role="dialog"], [data-state="open"]');
-        if (dialog) return dialog;
+    var els = document.querySelectorAll('*');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.children.length > 0) continue;
+      var txt = (el.textContent || '').trim();
+      if (txt !== 'Personalizar Chat') continue;
+      var p = el;
+      for (var n = 0; n < 10; n++) {
+        if (!p) break;
+        if (p.getAttribute && (p.getAttribute('role') === 'dialog' || p.getAttribute('data-state') === 'open' || p.getAttribute('data-radix-content-wrapper') !== null)) return p;
+        p = p.parentNode;
       }
+      return el.parentElement;
     }
     return null;
   }
 
   function injetarAbaCores() {
     var dialog = detectarPersonalizarChat();
-    if (!dialog) return;
+    if (!dialog) { console.log('[walytech] Personalizar Chat: dialogo NAO encontrado'); return; }
     if (dialog.querySelector('[data-waly-cores-tab]')) return;
-    var tabs = dialog.querySelectorAll('button');
+    console.log('[walytech] Personalizar Chat: dialogo encontrado, injetando aba Cores...');
+    var allBtns = dialog.querySelectorAll('button');
     var tabBar = null;
-    for (var i = 0; i < tabs.length; i++) {
-      var t = tabs[i];
-      if (t.textContent === 'Ações do Chat' || t.textContent === 'Lista de Atendimentos') {
+    for (var i = 0; i < allBtns.length; i++) {
+      var t = allBtns[i];
+      var txt = (t.textContent || '').trim();
+      if (txt === 'Ações do Chat' || txt === 'Lista de Atendimentos' || txt === 'Detalhes do Contato') {
         tabBar = t.parentNode;
         break;
       }
@@ -168,8 +177,6 @@
     abaCores.textContent = 'Cores';
     abaCores.style.cssText = 'flex:1;padding:6px 2px 8px;text-align:center;background:none;border:0;border-bottom:2px solid rgba(255,255,255,.08);color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;line-height:1.2';
     abaCores.addEventListener('click', function () {
-      var sections = dialog.querySelectorAll('[data-waly-cores-section]');
-      for (var i = 0; i < sections.length; i++) sections[i].style.display = 'none';
       var coresSection = dialog.querySelector('[data-waly-cores-content]');
       if (coresSection) coresSection.style.display = 'block';
       var allTabs = tabBar.querySelectorAll('button');
@@ -2321,8 +2328,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8.4';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.4';
+  var SK_VERSION = '2.8.5';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.5';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
