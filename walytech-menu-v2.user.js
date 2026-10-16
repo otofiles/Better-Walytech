@@ -285,6 +285,13 @@
 
   function loopPersonalizarChat() {
     try { injetarAbaCores(); } catch (e) {}
+    try {
+      var dialog = detectarPersonalizarChat();
+      if (!dialog) {
+        var coresSection = document.querySelector('[data-waly-cores-content]');
+        if (coresSection) coresSection.style.display = 'none';
+      }
+    } catch (e) {}
   }
 
   window.__walytPersonalizarChatDebug = function () {
