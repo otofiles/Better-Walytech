@@ -2034,21 +2034,22 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     raiz.style.setProperty('--waly-bg-shade', b >= 0 ? 'rgba(255,255,255,' + alfa.toFixed(3) + ')' : 'rgba(0,0,0,' + alfa.toFixed(3) + ')');
   }
 
-  function processarImagem(file, cb) {
+  function processarImagem(file, cb, qualidade, maxDim) {
+    qualidade = qualidade || 0.9;
+    maxDim = maxDim || 1920;
     var fr = new FileReader();
     fr.onerror = function () { cb(null); };
     fr.onload = function () {
       var img = new Image();
       img.onerror = function () { cb(null); };
       img.onload = function () {
-        var maxDim = 1280;
         var esc = Math.max(img.width, img.height) > maxDim ? maxDim / Math.max(img.width, img.height) : 1;
         var c = document.createElement('canvas');
         c.width = Math.max(1, Math.round(img.width * esc));
         c.height = Math.max(1, Math.round(img.height * esc));
         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        var url = c.toDataURL('image/jpeg', 0.9);
-        console.log('[walytech] imagem processada:', c.width + 'x' + c.height, 'tamanho:', Math.round(url.length / 1024) + 'KB');
+        var url = c.toDataURL('image/jpeg', qualidade);
+        console.log('[walytech] imagem processada:', c.width + 'x' + c.height, 'q=' + qualidade, 'tamanho:', Math.round(url.length / 1024) + 'KB');
         cb(url);
       };
       img.src = fr.result;
@@ -2067,23 +2068,33 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
         var f = (bgFile.files && bgFile.files[0]) || null;
         bgFile.value = '';
         if (!f) return;
-        processarImagem(f, function (url) {
-          if (!url) {
-            alert('Não foi possível carregar a imagem.');
-            return;
-          }
-           try { localStorage.removeItem(BG_KEY); } catch (e) {}
-          try {
-            localStorage.setItem(BG_KEY, url);
-            localStorage.setItem(BG_ON_KEY, '1');
-          } catch (e) {
-             alert('Imagem muito grande para salvar neste navegador (' + Math.round(url.length / 1024) + 'KB). Escolha uma imagem menor.');
-            return;
-          }
-          bgAtualizar();
-          atualizarHub();
-           mostrarToast('Fundo atualizado: ' + Math.round(url.length / 1024) + 'KB');
-        });
+        function tentar(qualidade, maxDim) {
+          processarImagem(f, function (url) {
+            if (!url) {
+              alert('Não foi possível carregar a imagem.');
+              return;
+            }
+            try { localStorage.removeItem(BG_KEY); } catch (e) {}
+            try {
+              localStorage.setItem(BG_KEY, url);
+              localStorage.setItem(BG_ON_KEY, '1');
+            } catch (e) {
+              // Tentar com qualidade mais baixa ou resolução menor
+              if (qualidade > 0.5) {
+                tentar(qualidade - 0.2, maxDim);
+              } else if (maxDim > 640) {
+                tentar(0.9, Math.round(maxDim * 0.7));
+              } else {
+                alert('Imagem muito grande para salvar neste navegador (' + Math.round(url.length / 1024) + 'KB). Escolha uma imagem menor.');
+              }
+              return;
+            }
+            bgAtualizar();
+            atualizarHub();
+            mostrarToast('Fundo atualizado: ' + Math.round(url.length / 1024) + 'KB (q=' + qualidade + ')');
+          }, qualidade, maxDim);
+        }
+        tentar(0.9, 1920);
       });
     }
     bgFile.click();
