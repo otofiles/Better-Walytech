@@ -2041,13 +2041,14 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       var img = new Image();
       img.onerror = function () { cb(null); };
       img.onload = function () {
-        var maxDim = 1600;
+        var maxDim = 1280;
         var esc = Math.max(img.width, img.height) > maxDim ? maxDim / Math.max(img.width, img.height) : 1;
         var c = document.createElement('canvas');
         c.width = Math.max(1, Math.round(img.width * esc));
         c.height = Math.max(1, Math.round(img.height * esc));
         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        var url = file.type === 'image/png' ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.85);
+        var url = c.toDataURL('image/jpeg', 0.9);
+        console.log('[walytech] imagem processada:', c.width + 'x' + c.height, 'tamanho:', Math.round(url.length / 1024) + 'KB');
         cb(url);
       };
       img.src = fr.result;
@@ -2071,15 +2072,17 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
             alert('Não foi possível carregar a imagem.');
             return;
           }
+           try { localStorage.removeItem(BG_KEY); } catch (e) {}
           try {
             localStorage.setItem(BG_KEY, url);
             localStorage.setItem(BG_ON_KEY, '1');
           } catch (e) {
-            alert('Imagem muito grande para salvar neste navegador. Escolha uma imagem menor.');
+             alert('Imagem muito grande para salvar neste navegador (' + Math.round(url.length / 1024) + 'KB). Escolha uma imagem menor.');
             return;
           }
           bgAtualizar();
           atualizarHub();
+           mostrarToast('Fundo atualizado: ' + Math.round(url.length / 1024) + 'KB');
         });
       });
     }
