@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8.5
+// @version      2.8.6
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.5
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.5
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.6
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.6
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -53,11 +53,14 @@
 
   var SVG_DL = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/60 group-hover:text-sidebar-foreground" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>';
 
+  var SVG_CLI = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/60 group-hover:text-sidebar-foreground" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" x2="19" y1="8" y2="14"></line><line x1="22" x2="16" y1="11" y2="11"></line></svg>';
+
   var SVG_STA = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-sidebar-foreground/60 group-hover:text-sidebar-foreground" aria-hidden="true"><line x1="18" x2="18" y1="20" y2="10"></line><line x1="12" x2="12" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="14"></line></svg>';
 
   var ATALHOS = [
     { rotulo: 'Chat', caminho: '/tickets', svg: SVG_CHAT },
     { rotulo: 'Relatório de Atendimentos', caminho: '/tickets/service-report', svg: SVG_REL },
+    { rotulo: 'Cadastro de Clientes', caminho: '/registrations/customers', svg: SVG_CLI },
     { rotulo: 'Baixar atualizações', acao: 'update', svg: SVG_DL }
   ];
 
@@ -2139,8 +2142,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8.5';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.5';
+  var SK_VERSION = '2.8.6';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.6';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
