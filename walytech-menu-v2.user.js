@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8.7
+// @version      2.8.8
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.7
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.7
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.8
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.8
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -2157,8 +2157,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8.7';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.7';
+  var SK_VERSION = '2.8.8';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.8';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
@@ -2558,15 +2558,17 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   var TECLAS_KEY = 'walytechAtalhos';
   var ATALHOS_DISPONIVEIS = [
     { id: 'finalizar', rot: 'Finalizar atendimento', padrao: 'ctrl+shift+f', tipo: 'nativo', alvo: 'Finalizar' },
-    { id: 'transferir', rot: 'Transferir', padrao: 'ctrl+shift+t', tipo: 'nativo', alvo: 'Transferir' },
+    { id: 'transferir', rot: 'Transferir', padrao: 'ctrl+alt+t', tipo: 'nativo', alvo: 'Transferir' },
     { id: 'fechar', rot: 'Fechar conversa', padrao: 'ctrl+shift+x', tipo: 'nativo', alvo: 'Fechar conversa' },
     { id: 'naolidi', rot: 'Marcar como Não Lido', padrao: 'ctrl+shift+u', tipo: 'menu', alvo: 'Marcar como Não Lido' },
     { id: 'pesquisar', rot: 'Pesquisar na conversa', padrao: 'ctrl+shift+p', tipo: 'nativo2', alvo: 'pesquisar' },
     { id: 'tags', rot: 'Adicionar Tag', padrao: 'ctrl+shift+g', tipo: 'nativo2', alvo: 'tags' },
-    { id: 'soltar', rot: 'Soltar chat', padrao: 'ctrl+shift+o', tipo: 'nativo2', alvo: 'soltar' },
-    { id: 'detalhes', rot: 'Detalhes do contato', padrao: 'ctrl+shift+i', tipo: 'nativo2', alvo: 'detalhes' },
+    { id: 'soltar', rot: 'Soltar chat', padrao: 'ctrl+alt+s', tipo: 'nativo2', alvo: 'soltar' },
+    { id: 'detalhes', rot: 'Detalhes do contato', padrao: 'ctrl+alt+i', tipo: 'nativo2', alvo: 'detalhes' },
     { id: 'atualizar', rot: 'Atualizar tickets', padrao: 'ctrl+alt+a', tipo: 'atualizar' }
   ];
+
+  var ATALHOS_RESERVADOS = ['ctrl+t', 'ctrl+w', 'ctrl+n', 'ctrl+shift+t', 'ctrl+shift+w', 'ctrl+shift+n', 'ctrl+shift+i', 'ctrl+shift+o', 'ctrl+shift+s', 'ctrl+tab', 'ctrl+shift+tab'];
 
   function atalhosSalvos() {
     try {
@@ -2652,43 +2654,69 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     for (var xi = 0; xi < ATALHOS_DISPONIVEIS.length; xi++) if (ATALHOS_DISPONIVEIS[xi].id === id) item = ATALHOS_DISPONIVEIS[xi];
     if (!item) return;
     if (item.tipo === 'nativo') {
+      var listaB = Array.prototype.slice.call(document.querySelectorAll('[aria-label="' + item.alvo + '"]'));
       var h = getHeader();
-      if (!h) return;
-      var bt = h.querySelector('[aria-label="' + item.alvo + '"]');
-      if (bt) { try { bt.click(); } catch (e) {} }
+      if (h) {
+        var noH = [];
+        var fora = [];
+        for (var iG = 0; iG < listaB.length; iG++) (h.contains(listaB[iG]) ? noH : fora).push(listaB[iG]);
+        listaB = noH.concat(fora);
+      }
+      for (var iH = 0; iH < listaB.length; iH++) {
+        if (ehNossoDOM(listaB[iH]) || botaoInvisivel(listaB[iH])) continue;
+        try { listaB[iH].click(); } catch (e) {}
+        return;
+      }
+      for (var iJ = 0; iJ < listaB.length; iJ++) {
+        if (ehNossoDOM(listaB[iJ])) continue;
+        try { listaB[iJ].click(); } catch (e) {}
+        break;
+      }
+      if (listaB.length === 0) mostrarToast('Ação indisponível neste momento.', true);
       return;
     }
     if (item.tipo === 'menu') {
       var h2 = getHeader();
       if (!h2) return;
-      var btn3 = h2.querySelector('button[aria-haspopup="menu"]');
+      var trs2 = h2.querySelectorAll('button[aria-haspopup="menu"]');
+      var btn3 = trs2.length ? trs2[trs2.length - 1] : null;
       if (btn3) { try { btn3.click(); } catch (e) {} }
       setTimeout(function () {
         var menus = document.querySelectorAll('[role="menu"][data-state="open"] [role="menuitem"]');
+        var achou = false;
         for (var i = 0; i < menus.length; i++) {
           if (norm(menus[i].textContent) === norm(item.alvo)) {
             try { menus[i].click(); } catch (e) {}
+            achou = true;
             return;
           }
         }
+        if (!achou) mostrarToast('Ação indisponível neste momento.', true);
       }, 120);
       return;
     }
     if (item.tipo === 'nativo2') {
+      var scopes2 = [];
       var h3 = getHeader();
-      if (!h3) return;
-      var btns = h3.querySelectorAll('button');
-      for (var i = 0; i < btns.length; i++) {
-        var b = btns[i];
-        if (botaoInvisivel(b)) continue;
-        if (b.getAttribute('aria-haspopup') === 'menu') continue;
-        var la = norm(b.getAttribute('aria-label') || '');
-        var match = (item.alvo === 'pesquisar' && /pesquis|search|buscar/.test(la)) ||
-                    (item.alvo === 'tags' && /tag|etiqueta/.test(la)) ||
-                    (item.alvo === 'soltar' && /soltar/.test(la)) ||
-                    (item.alvo === 'detalhes' && /detalhe/.test(la));
-        if (match) { try { b.click(); } catch (e) {} return; }
+      if (h3) scopes2.push(h3);
+      scopes2.push(document);
+      var achou2 = false;
+      for (var si = 0; si < scopes2.length && !achou2; si++) {
+        var btns = scopes2[si].querySelectorAll('button');
+        for (var i = 0; i < btns.length; i++) {
+          var b = btns[i];
+          if (ehNossoDOM(b)) continue;
+          if (botaoInvisivel(b)) continue;
+          if (b.getAttribute('aria-haspopup') === 'menu') continue;
+          var la = norm(b.getAttribute('aria-label') || '');
+          var match = (item.alvo === 'pesquisar' && /pesquis|search|buscar/.test(la)) ||
+                      (item.alvo === 'tags' && /tag|etiqueta/.test(la)) ||
+                      (item.alvo === 'soltar' && /soltar/.test(la)) ||
+                      (item.alvo === 'detalhes' && /detalhe/.test(la));
+          if (match) { try { b.click(); } catch (e) {} achou2 = true; return; }
+        }
       }
+      if (!achou2) mostrarToast('Ação indisponível neste momento.', true);
       return;
     }
     if (item.tipo === 'atualizar') { clicarAtualizar(true); return; }
@@ -2706,6 +2734,12 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       if (!cb) return;
       ev.preventDefault();
       ev.stopPropagation();
+      if (ATALHOS_RESERVADOS.indexOf(cb) !== -1) {
+        gravandoTecla = null;
+        atualizarPainelTeclas();
+        mostrarToast('Esse atalho é reservado do navegador. Grave outro.', true);
+        return;
+      }
       var id = gravandoTecla;
       salvarAtalho(id, cb);
       gravandoTecla = null;
