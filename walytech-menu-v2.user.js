@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8.6
+// @version      2.8.7
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.6
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.6
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.7
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.7
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -40,9 +40,6 @@
       .replace(/\s+/g, ' ')
       .trim()
       .toLowerCase();
-  }
-
-  function loopBotoes() {
   }
 
   var MARCA = 'data-walytech-nav';
@@ -384,7 +381,6 @@
     '#walytech-rgb-panel .waly-tema-botao:hover{background:rgba(255,255,255,.14)}' +
     '#walytech-rgb-panel .waly-tema-botao.waly-sel{border-color:#fff;background:rgba(255,255,255,.22);font-weight:600}' +
     '#walytech-rgb-panel .waly-bg-prevw{display:none;margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.16)}' +
-    '#walytech-rgb-panel #waly-bg-preview{display:block;width:100%;max-height:110px;object-fit:cover;background:#000}' +
     '#walytech-rgb-panel .waly-bg-ligado{display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer}' +
     '#walytech-rgb-panel .waly-bg-acoes{display:flex;gap:8px;margin-top:12px}' +
     '#walytech-rgb-panel .waly-bg-acoes .waly-rgb-reset{flex:1}' +
@@ -412,17 +408,6 @@
     '#walytech-rgb-panel .waly-foto-prevw img{display:block;width:100%;max-height:150px;object-fit:contain;background:#000}' +
     '#walytech-rgb-panel .waly-foto-input{width:100%;padding:8px;margin-bottom:10px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;font-size:12px}' +
     '#walytech-rgb-panel .waly-foto-input::placeholder{color:rgba(255,255,255,.35)}' +
-    '#walytech-dots-panel{position:fixed;z-index:2147483600;display:none;min-width:234px;max-width:290px;padding:6px;border-radius:14px;background:#1b1b21;color:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px -16px rgba(0,0,0,.65);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px}' +
-    '#walytech-dots-panel.waly-aberto{display:block}' +
-    '#walytech-dots-panel .waly-dots-topo{display:flex;align-items:center;justify-content:space-between;font-weight:600;padding:6px 10px 8px}' +
-    '#walytech-dots-panel .waly-rgb-x{background:none;border:0;color:#fff;cursor:pointer;font-size:13px;opacity:.7;padding:2px 4px}' +
-    '#walytech-dots-panel .waly-rgb-x:hover{opacity:1}' +
-    '#walytech-dots-panel .waly-dots-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;background:none;color:#fff;border-radius:9px;cursor:pointer;font-size:13px;text-align:left;font-family:inherit;line-height:1.2}' +
-    '#walytech-dots-panel .waly-dots-item:hover{background:rgba(255,255,255,.1)}' +
-    '#walytech-dots-panel .waly-dots-item svg{width:16px;height:16px;flex:0 0 auto;opacity:.85}' +
-    '#walytech-dots-panel .waly-dots-item.waly-dots-perigo{color:#F87171}' +
-    '#walytech-dots-panel .waly-dots-item.waly-dots-perigo:hover{background:rgba(248,113,113,.14)}' +
-    '#walytech-dots-panel .waly-dots-sep{height:1px;margin:5px 8px;background:rgba(255,255,255,.1)}' +
     'img[data-walytech-foto-inj]{border-radius:inherit}';
   (document.head || document.documentElement).appendChild(estiloPainel);
 
@@ -728,6 +713,7 @@
   var FOTO_CHAT_CACHE_KEY = 'chat_photo_urls_v1';
   var FOTO_CHAT_NOSSO_KEY = 'walytechChatFotos';
   var FOTO_BLOQ_KEY = 'walytechFotoBloqueados';
+  var FOTO_MASTER_KEY = 'walytechFotosCustomOn';
   var FOTO_REPO = 'otofiles/Better-Walytech';
   var FOTO_RAW = 'https://raw.githubusercontent.com/' + FOTO_REPO + '/main/avatares.json';
   var FOTO_GH_TOKEN = '';
@@ -774,7 +760,25 @@
   }
 
   function colegasLigados() {
+    if (!fotosMestrasLigadas()) return false;
     try { return localStorage.getItem(FOTO_COLEGA_KEY) !== '0'; } catch (e) { return true; }
+  }
+
+  function temRastroFoto() {
+    var ks = [FOTO_KEY, FOTO_MAP_KEY, FOTO_MAP_HORA_KEY, FOTO_CHAT_NOSSO_KEY, FOTO_BLOQ_KEY];
+    for (var i = 0; i < ks.length; i++) {
+      try { if (localStorage.getItem(ks[i]) !== null) return true; } catch (e) {}
+    }
+    return false;
+  }
+
+  function fotosMestrasLigadas() {
+    try {
+      var v = localStorage.getItem(FOTO_MASTER_KEY);
+      if (v === '0') return false;
+      if (v === '1') return true;
+    } catch (e) {}
+    return temRastroFoto();
   }
 
   function fotoToken() {
@@ -1255,6 +1259,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
   }
 
   function aplicarFotos() {
+    if (!fotosMestrasLigadas()) return;
     var m = mapaFotos();
     var u = minhaFoto();
     if (fotoLigada() && linkValido(u)) aplicarFotoUsuario(u.trim());
@@ -1306,6 +1311,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
 
   function loopFoto() {
     try {
+      if (!fotosMestrasLigadas()) return;
       carregarFotoMap(false);
       var agora = Date.now();
       if (agora - fotoLoopUltimo < 1500) return;
@@ -1679,6 +1685,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       '<div class="waly-av-lista">' + avancRows + '</div>' +
       '<button type="button" class="waly-rgb-reset" id="waly-av-reset">Restaurar padrão (todas)</button>' +
       '<div class="waly-tema-etq">Sincronização das fotos</div>' +
+      '<label class="waly-bg-ligado"><input type="checkbox" id="waly-hub-foto-mestra"> Aplicar fotos customizadas</label>' +
+      '<div class="waly-av-anota">Interruptor único: desligar volta ao visual original do app, religar restaura as fotos do jeito que estavam, sem reconfigurar nada.</div>' +
       '<div class="waly-av-anota">Opcional: se o script já vier com um servidor, é só usar. Para trocar (ou desligar nesta máquina), use os campos abaixo.</div>' +
       '<input type="text" class="waly-foto-input" id="waly-hub-foto-srv" placeholder="URL do servidor (https://...)">' +
       '<input type="password" class="waly-foto-input" id="waly-hub-foto-chave" placeholder="Chave de escrita (se o servidor pedir)">' +
@@ -1788,6 +1796,11 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     });
     painel.querySelector('#waly-hub-foto-colega').addEventListener('change', function () {
       try { localStorage.setItem(FOTO_COLEGA_KEY, this.checked ? '1' : '0'); } catch (e) {}
+      restaurarAvatares();
+      aplicarFotos();
+    });
+    painel.querySelector('#waly-hub-foto-mestra').addEventListener('change', function () {
+      try { localStorage.setItem(FOTO_MASTER_KEY, this.checked ? '1' : '0'); } catch (e) {}
       restaurarAvatares();
       aplicarFotos();
     });
@@ -1933,6 +1946,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       if (document.activeElement !== inpF) inpF.value = urlFoto;
       painel.querySelector('#waly-hub-foto-on').checked = fotoLigada();
       painel.querySelector('#waly-hub-foto-colega').checked = colegasLigados();
+      var mestra = painel.querySelector('#waly-hub-foto-mestra');
+      if (mestra) mestra.checked = fotosMestrasLigadas();
       var temMinha = !!urlFoto || !!mapaFotos()[norm(meuNome())];
       painel.querySelector('#waly-hub-foto-limpar').style.display = temMinha ? '' : 'none';
       var sy = painel.querySelector('#waly-hub-foto-sync');
@@ -2142,8 +2157,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8.6';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.6';
+  var SK_VERSION = '2.8.7';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.7';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
