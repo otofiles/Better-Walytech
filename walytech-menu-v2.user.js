@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8.8
+// @version      2.8.9
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/new/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.8
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.8
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.9
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.9
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -274,6 +274,7 @@
 
   var COR_PADRAO = '#811c1c';
   var COR_KEY = 'walytechBrandColor';
+  var TOPO_LOGO_KEY = 'walytechTopoLogo';
   var BRILHO_KEY = 'walytechBrandBrightness';
   var BRILHO_MIN = -40;
   var BRILHO_MAX = 40;
@@ -319,7 +320,12 @@
     'button[data-walytech-nl]{background-color:#10B981!important;border-color:#10B981!important;color:#FFFFFF!important;box-shadow:0 0 0 1px rgba(16,185,129,.35),0 4px 14px -4px rgba(16,185,129,.7)}' +
     'button[data-walytech-nl]:hover{background-color:#059669!important;border-color:#059669!important;color:#FFFFFF!important}' +
     'button[data-walytech-nl] svg{stroke:#FFFFFF!important;color:#FFFFFF!important}' +
-    'button[data-walytech-nl] span.bg-emerald-500{background-color:#FFFFFF!important;box-shadow:0 0 0 2px #10B981!important}';
+    'button[data-walytech-nl] span.bg-emerald-500{background-color:#FFFFFF!important;box-shadow:0 0 0 2px #10B981!important}' +
+    'header.z-40.h-16{background-color:var(--primary)!important;color:#FFFFFF!important}' +
+    'html.waly-topo-nologo header.z-40.h-16 div.flex.flex-1:not([class*="justify-end"]) > img{display:none!important}' +
+    'html.waly-topo-nologo header.z-40.h-16 div.flex.flex-1:not([class*="justify-end"]) > p{display:none!important}' +
+    'html.waly-topo-nologo img[class*="h-26"]{display:none!important}' +
+    'html.waly-topo-nologo img[class*="object-contain"][class*="opacity-30"]{display:none!important}';
 
   var estiloTema = document.createElement('style');
   estiloTema.id = 'walytech-tema';
@@ -496,6 +502,14 @@
 
   function corSalva() {
     try { return localStorage.getItem(COR_KEY) || COR_PADRAO; } catch (e) { return COR_PADRAO; }
+  }
+
+  function topoLogoEsconde() {
+    try { return localStorage.getItem(TOPO_LOGO_KEY) !== '0'; } catch (e) { return true; }
+  }
+
+  function topoLogoAplicar() {
+    document.documentElement.classList.toggle('waly-topo-nologo', topoLogoEsconde());
   }
 
   function brilhoSalvo() {
@@ -1629,6 +1643,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       '<label class="waly-rgb-linha">Saturação <span class="waly-rgb-bval">' + textoBrilho(brilhoSalvo()) + '</span></label>' +
       '<input type="range" class="waly-rgb-range" min="' + BRILHO_MIN + '" max="' + BRILHO_MAX + '" step="1" value="' + brilhoSalvo() + '">' +
       '<button type="button" class="waly-rgb-reset">Restaurar cor padrão</button>' +
+      '<label class="waly-bg-ligado"><input type="checkbox" id="waly-topo-logo"' + (topoLogoEsconde() ? ' checked' : '') + '> Esconder logo e nome do whitelabel</label>' +
+      '<div class="waly-brilho-desc">Barra do topo, tela inicial e tela de login.</div>' +
       '</section>' +
       '<section class="waly-aba-section" data-walysec="modo">' +
       '<div class="waly-tema-etq">Modo claro / escuro</div>' +
@@ -1724,6 +1740,10 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
       painel.querySelector('.waly-rgb-range').value = 0;
       painel.querySelector('.waly-rgb-bval').textContent = textoBrilho(0);
       atualizarSelecao();
+    });
+    painel.querySelector('#waly-topo-logo').addEventListener('change', function () {
+      try { localStorage.setItem(TOPO_LOGO_KEY, this.checked ? '1' : '0'); } catch (e) {}
+      topoLogoAplicar();
     });
     var bolasEls = painel.querySelectorAll('.waly-rgb-bola');
     for (var i = 0; i < bolasEls.length; i++) {
@@ -2157,8 +2177,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8.8';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.8';
+  var SK_VERSION = '2.8.9';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.9';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
@@ -2816,6 +2836,7 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
 
   aplicarCor(corSalva(), false);
   brilhoAplicar();
+  topoLogoAplicar();
 
   setInterval(tick, 1000);
   var tickAgendado = false;
