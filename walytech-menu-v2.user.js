@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8.9
+// @version      2.8.10
 // @description  Melhora funcionalidades no bot.
-// @match        https://walyzappro.walytech.com.br/new/*
+// @match        https://walyzappro.walytech.com.br/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.9
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.9
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.10
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.10
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -2177,8 +2177,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8.9';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.9';
+  var SK_VERSION = '2.8.10';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.10';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
