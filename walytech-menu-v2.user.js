@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Better walytech
 // @namespace    https://walyzappro.walytech.com.br
-// @version      2.8.11
+// @version      2.8.12
 // @description  Melhora funcionalidades no bot.
 // @match        https://walyzappro.walytech.com.br/*
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.11
-// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.11
+// @updateURL    https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.12
+// @downloadURL  https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.12
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -606,11 +606,6 @@
     }
   }
 
-  var notaCache = null;
-  var notaCacheHora = 0;
-  var notaBuscando = false;
-  var notaUltimaTentativa = 0;
-
   function lerNgToken() {
     try {
       var raw = localStorage.getItem('ngStorage-token');
@@ -643,84 +638,6 @@
       var sel = t.clienteSelecionado != null ? t.clienteSelecionado : (t.cucli != null ? t.cucli : arr[0]);
       return sel != null && (sel.id != null || sel.clienteId != null) ? String(sel.id != null ? sel.id : sel.clienteId) : null;
     } catch (e) { return null; }
-  }
-
-  function buscarNota() {
-    if (notaBuscando) return;
-    var tok = lerNgToken();
-    if (!tok) return;
-    notaBuscando = true;
-    notaUltimaTentativa = Date.now();
-    var h = {
-      'Authorization': 'Bearer ' + tok,
-      'Domain': location.hostname || '',
-      'Accept-Language': localStorage.getItem('lang') || 'pt-BR'
-    };
-    var tid = lerTenantId();
-    if (tid) h['x-tenant-id'] = tid;
-    try {
-      fetch('/api/usuarios/chat/perfil', { headers: h, credentials: 'include' })
-        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-        .then(function (j) {
-          var d = j && (j.data || j);
-          var v = d ? d.avaliacaoAtendimento : null;
-          if (d && typeof d === 'object') {
-            var nomeApi = d.nome || d.usuarioNome || d.name || (d.usuario && d.usuario.nome);
-            if (nomeApi && !localStorage.getItem(FOTO_NOME_KEY)) {
-              try { localStorage.setItem(FOTO_NOME_KEY, String(nomeApi)); } catch (e) {}
-            }
-          }
-          notaCache = (v === null || v === undefined || v === '') ? null : Number(v);
-          notaCacheHora = Date.now();
-          notaBuscando = false;
-          console.log('[walytech] nota media carregada:', notaCache === null ? 'null/vazia' : notaCache.toFixed(1));
-          console.log('[walytech] payload do /usuarios/chat/perfil:', JSON.stringify(j).slice(0, 800));
-          injetarNota();
-        })
-        .catch(function (s) {
-          notaBuscando = false;
-          console.log('[walytech] falha ao buscar nota (http ' + s + ')');
-        });
-    } catch (e) {
-      notaBuscando = false;
-      console.log('[walytech] erro ao buscar nota:', e.message);
-    }
-  }
-
-  function injetarNota() {
-    var toggle = getThemeToggle();
-    if (!toggle || !toggle.parentNode) return;
-    var pai = toggle.parentNode;
-    var nota = notaCache;
-    var existe = pai.querySelector('[data-walytech-nota]');
-    if (nota === null || isNaN(nota)) {
-      if (existe && existe.parentNode) existe.parentNode.removeChild(existe);
-      return;
-    }
-    var alvo = btnUsuario();
-    if (alvo && alvo.parentNode === pai && existe && existe.previousElementSibling !== alvo) {
-      existe.parentNode.removeChild(existe);
-      existe = null;
-    }
-    if (!existe) {
-      var el = document.createElement('span');
-      el.setAttribute('data-walytech-nota', '1');
-      el.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-left:2px;padding:2px 8px;border-radius:9999px;background:rgba(255,255,255,.14);color:#FFF;font-size:12px;font-weight:600;line-height:1;white-space:nowrap;';
-      el.innerHTML = '<span style="color:#FBBF24;line-height:1">★</span><span>' + nota.toFixed(1).replace('.', ',') + '</span>';
-      el.title = 'Avaliação média: ' + nota.toFixed(1);
-      if (alvo && alvo.parentNode === pai && alvo.nextSibling) pai.insertBefore(el, alvo.nextSibling);
-      else pai.appendChild(el);
-    }
-  }
-
-  function loopNota() {
-    try {
-      injetarNota();
-      if (!lerNgToken()) return;
-      if (notaCache === null && notaUltimaTentativa && Date.now() - notaUltimaTentativa < 5 * 60 * 1000) return;
-      var velha = Date.now() - notaCacheHora > 5 * 60 * 1000;
-      if ((notaCache === null || velha) && !notaBuscando) buscarNota();
-    } catch (e) {}
   }
 
   var FOTO_KEY = 'walytechMinhaFoto';
@@ -2285,8 +2202,8 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     }
   }
 
-  var SK_VERSION = '2.8.11';
-  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.11';
+  var SK_VERSION = '2.8.12';
+  var UPDATE_URL = 'https://raw.githubusercontent.com/otofiles/Better-Walytech/main/walytech-menu-v2.user.js?v=2.8.12';
 
   function versaoMaior(a, b) {
     var pa = String(a).split('.').map(function (n) { return parseInt(n, 10) || 0; });
@@ -3149,7 +3066,6 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     loopFundo();
     loopTimer();
     loopBrilho();
-    loopNota();
     loopFoto();
     checarAtualizacao();
     fiscalizarToast();
@@ -3237,16 +3153,6 @@ var bs = pai.querySelectorAll('button[aria-haspopup]');
     ATALHOS_DISPONIVEIS.forEach(function (item) {
       console.log('[walytech]  -', item.rot + ':', formatarCombo(atalhoDe(item.id)));
     });
-  };
-
-  window.__walytNotaDebug = function () {
-    var toggle = getThemeToggle();
-    var el = toggle && toggle.parentNode ? toggle.parentNode.querySelector('[data-walytech-nota]') : null;
-    console.log('[walytech] token ngStorage-token:', lerNgToken() ? 'ok' : 'ausente');
-    console.log('[walytech] tenant x-tenant-id:', lerTenantId() || 'ausente');
-    console.log('[walytech] nota media cacheada:', notaCache === null ? 'nao carregada' : notaCache.toFixed(1));
-    console.log('[walytech] estrelinha injetada:', !!el ? (el.textContent || 'ok') : 'nao');
-    if (notaCache === null && !notaBuscando) buscarNota();
   };
 
   window.__walytUpdateDebug = function () {
